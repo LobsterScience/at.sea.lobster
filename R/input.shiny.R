@@ -14,6 +14,7 @@ dat.dir <- dlg_dir(filter = dlg_filters["csv",])$res
 con <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
 ##check for and create db tables if they don't exist
+
 table_name <- "FISH_INFO"
 ## look for existing table
 query <- paste("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table' AND name='", table_name, "'", sep = "")
@@ -45,6 +46,60 @@ if (result[[1]] == 0) {
   dbSendQuery(con, sql_statement)
 }
 
+
+table_name <- "TRAP_INFO"
+## look for existing table
+query <- paste("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table' AND name='", table_name, "'", sep = "")
+result <- dbGetQuery(con, query)
+# If the table does not exist, create it
+if (result[[1]] == 0) {
+  print(paste0("Creating new table called: ",table_name))
+  # Define the SQL statement to create the table
+  sql_statement <- paste0("
+    CREATE TABLE ",table_name," (
+    TRAP_NO VARCHAR2(50),
+    BAIT_CD1 VARCHAR2(50),
+    BAIT_CD2 VARCHAR2(100),
+    BAIT CD3 VARCHAR2(20),
+    BAIT_TYPE1 VARCHAR2(10),
+    BAIT_TYPE2 VARCHAR2(20),
+    BAIT_TYPE3 VARCHAR2(100)
+
+)")
+
+  # Execute the SQL statement to create table
+  dbSendQuery(con, sql_statement)
+}
+
+table_name <- "SET_INFO"
+## look for existing table
+query <- paste("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table' AND name='", table_name, "'", sep = "")
+result <- dbGetQuery(con, query)
+# If the table does not exist, create it
+if (result[[1]] == 0) {
+  print(paste0("Creating new table called: ",table_name))
+  # Define the SQL statement to create the table
+  sql_statement <- paste0("
+    CREATE TABLE ",table_name," (
+    TRIP_ID VARCHAR2(50),
+    SET_NO VARCHAR2(50),
+    NUM_TRAPS VARCHAR2(50),
+    LATDDMM VARCHAR2(100),
+    LONDDMM CD3 VARCHAR2(20),
+    GRID_NO VARCHAR2(10),
+    DEPTH_FM VARCHAR2(20),
+    SOAK_DAYS VARCHAR2(100),
+    VENT_CODE VARCHAR2(100),
+    NUM_VENTS VARCHAR2(50),
+    TRAP_TYPE VARCHAR2(50)
+)")
+
+
+  # Execute the SQL statement to create table
+  dbSendQuery(con, sql_statement)
+}
+
+
 ###########################################################################################
 ######## SHINY CODE
 
@@ -74,7 +129,7 @@ ui <- fluidPage(
     tags$style(HTML("
    .compact-row {
       display: flex;
-      flex-wrap: wrap; /* Allows wrapping if needed */
+      flex-wrap: nowrap; /* keeps all elements in one row */
       gap: 7px; /* Adds spacing between elements */
    }
     .compact-row .compact-input {
@@ -87,6 +142,12 @@ ui <- fluidPage(
       max-width: 200px; /* Ensure it doesn’t exceed this width */
       box-sizing: border-box;
     }
+        .compact-row .mediumwide-input {
+      flex: 0 0 100px; /* Fixed width for wide inputs */
+      max-width: 100px; /* Ensure it doesn’t exceed this width */
+      box-sizing: border-box;
+    }
+
      .compact-row label {
       display: block; /* Ensures label is on its own line */
         height: 2.6em; /* Forces two rows for the label */
@@ -200,10 +261,10 @@ fluidRow(
 ),
 
 div(class = "compact-row",
-    div(class= "compact-input", numericInput("trawl.num", "TRAWL / STRING#",value = 0, min = 0)),
+    div(class= "compact-input", numericInput("set.num", "TRAWL / STRING#",value = 0, min = 0)),
     div(class= "compact-input", numericInput("num.traps", "#TRAPS IN SET",value = 0, min = 0)),
-    column(1, numericInput("lat", "LATITUDE (DDMM.MM)", value = NULL, max = 9059.99, min = -9059.99, step = 0.01)),
-    column(1, numericInput("lon", "LONGITUDE (DDMM.MM)", value = NULL, max = 18059.99, min = -18059.99, step = 0.01)),
+    div(class = "mediumwide-input", numericInput("lat", "LATITUDE (DDMM.MM)", value = NULL, max = 9059.99, min = -9059.99, step = 0.01)),
+    div(class = "mediumwide-input", numericInput("lon", "LONGITUDE (DDMM.MM)", value = NULL, max = 18059.99, min = -18059.99, step = 0.01)),
     div(class= "compact-input", numericInput("grid.num", "GRID NO", value = NULL)),
     div(class= "compact-input", numericInput("depth", "DEPTH (FM)", value = NULL, min = 0)),
     div(class= "compact-input", numericInput("soak.days", "SOAK DAYS", value = NULL, min = 0)),
@@ -257,10 +318,34 @@ server <- function(input, output, session) {
 
   ## when set info is submitted
   observeEvent(input$next.set, {
-#print("set entered")
+
+    # Initialize database connection
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    set.dat <- data.frame(
+      input$trip.code,
+      input$set.num,
+      input$num.traps,
+      input$lat,
+      input$lon,
+      input$grid.num,
+      input$depth,
+      input$soak.days,
+      input$vent.code,
+      input$num.vents,
+      input$trap.type
+    )
+    set_columns <- dbListFields(db, "SET_INFO")
+    colnames(set.dat) = set_columns
+    dbWriteTable(db, "SET_INFO", set.dat, append = TRUE, row.names = FALSE)
+
+    # Close the database connection
+    dbDisconnect(db)
+    print("database updated")
+
     # Clear input fields for SET INFO
-    updateNumericInput(session, "trawl.num", value = 0)
-    updateNumericInput(session, "num.traps", value = 0)
+    updateNumericInput(session, "set.num", value = NA)
+    updateNumericInput(session, "num.traps", value = NA)
     updateNumericInput(session, "lat", value = NA)
     updateNumericInput(session, "lon", value = NA)
     updateNumericInput(session, "grid.num", value = NA)
@@ -361,6 +446,8 @@ server <- function(input, output, session) {
   observeEvent(input$next.trap, {
     # Initialize database connection
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    ##Fish Data
     fish_columns <- dbListFields(db, "FISH_INFO")
     # Loop through each row and collect data for insertion
     for (row_id in row_ids()) {
@@ -385,11 +472,53 @@ server <- function(input, output, session) {
       data[data == ""] <- NA
       data <- data %>% filter(!species_code %in% NA) ### remove last unfilled row where species code wasn't added
       colnames(data) = fish_columns
-      RSQLite::dbWriteTable(db, "FISH_INFO", data, append = TRUE, row.names = FALSE)
+      dbWriteTable(db, "FISH_INFO", data, append = TRUE, row.names = FALSE)
     }
+
+    ## TRAP Data
+    trap_columns <- dbListFields(db, "TRAP_INFO")
+    t.dat <- data.frame(
+      input$trap.num,
+      input$bait.code1,
+      input$bait.code2,
+      input$bait.code3,
+      input$bait.type1,
+      input$bait.type2,
+      input$bait.type3
+    )
+    colnames(t.dat) = trap_columns
+    dbWriteTable(db, "TRAP_INFO", t.dat, append = TRUE, row.names = FALSE)
+
     # Close the database connection
     dbDisconnect(db)
     print("database updated")
+
+
+    # Clear input fields for Trap and Fish INFO
+    updateNumericInput(session, "trap.num", value = NA)
+    updateNumericInput(session, "bait.code1", value = "")
+    updateNumericInput(session, "bait.code2", value = "")
+    updateNumericInput(session, "bait.code3", value = "")
+    updateNumericInput(session, "bait.type1", value = "")
+    updateNumericInput(session, "bait.type2", value = "")
+    updateNumericInput(session, "bait.type3", value = "")
+
+    for (row_id in row_ids()) {
+    updateNumericInput(session, paste0("trap.num_", row_id), value = NA)
+    updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
+    updateNumericInput(session, paste0("common_", row_id), value = "")
+    updateNumericInput(session, paste0("length_", row_id), value = NA)
+    updateNumericInput(session, paste0("sex_", row_id), value = "")
+    updateNumericInput(session, paste0("shell_", row_id), value = "")
+    updateNumericInput(session, paste0("cond_", row_id), value = "")
+    updateNumericInput(session, paste0("disease_", row_id), value = NA)
+    updateNumericInput(session, paste0("egg_", row_id), value = NA)
+    updateTextInput(session, paste0("clutch_",row_id), value = NA)
+    updateTextInput(session, paste0("vnotch_",row_id), value = "")
+    updateTextInput(session, paste0("kept_",row_id), value = "")
+    updateTextInput(session, paste0("abund_",row_id), value = NA)
+    updateTextInput(session, paste0("cull_",row_id), value = "")
+    }
 
 
   }) ## observe block
