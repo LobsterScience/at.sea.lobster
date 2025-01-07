@@ -25,20 +25,24 @@ if (result[[1]] == 0) {
   # Define the SQL statement to create the table
   sql_statement <- paste0("
     CREATE TABLE ",table_name," (
+    TRAP_ID VARCHAR2(50),
     TRAP_NO VARCHAR2(50),
-    SPEC_CODE VARCHAR2(50),
+    FISH_NO VARCHAR2(50),
+    SPECCD_ID VARCHAR2(50),
     COMMON VARCHAR2(100),
-    LENGTH VARCHAR2(20),
-    SEX VARCHAR2(10),
-    SHELL_HARD VARCHAR2(20),
+    FISH_LENGTH VARCHAR2(20),
+    SEXCD_ID VARCHAR2(10),
+    SHELL VARCHAR2(20),
     CONDITION VARCHAR2(100),
-    SHELL_DISEASE VARCHAR2(20),
+    DISEASE VARCHAR2(20),
     EGG_STAGE VARCHAR2(20),
     CLUTCH VARCHAR2(20),
     VNOTCH VARCHAR2(20),
     KEPT VARCHAR2(20),
     ABUNDANCE VARCHAR2(20),
-    CULL VARCHAR2(20)
+    CULLS VARCHAR2(20),
+    RELEASE_CD VARCHAR2(20)
+
 
 )")
 
@@ -57,10 +61,13 @@ if (result[[1]] == 0) {
   # Define the SQL statement to create the table
   sql_statement <- paste0("
     CREATE TABLE ",table_name," (
+    FISHSET_ID VARCHAR2(50),
+    SET_NO VARCHAR2(50),
+    TRAP_ID VARCHAR2(50),
     TRAP_NO VARCHAR2(50),
-    BAIT_CD1 VARCHAR2(50),
-    BAIT_CD2 VARCHAR2(100),
-    BAIT CD3 VARCHAR2(20),
+    BAIT_CD VARCHAR2(50),
+    BAIT_CD2 VARCHAR2(50),
+    BAIT_CD3 VARCHAR2(50),
     BAIT_TYPE1 VARCHAR2(10),
     BAIT_TYPE2 VARCHAR2(20),
     BAIT_TYPE3 VARCHAR2(100)
@@ -82,18 +89,56 @@ if (result[[1]] == 0) {
   sql_statement <- paste0("
     CREATE TABLE ",table_name," (
     TRIP_ID VARCHAR2(50),
+    FISHSET_ID VARCHAR2(50),
     SET_NO VARCHAR2(50),
+    SETCD_ID VARCHAR2(50),
+    GEAR_ID VARCHAR2(50),
+    SPECSCD_ID VARCHAR2(50),
+    STRATUM_ID VARCHAR2(50),
+    EST_CATCH VARCHAR2(50),
     NUM_TRAPS VARCHAR2(50),
-    LATDDMM VARCHAR2(100),
-    LONDDMM CD3 VARCHAR2(20),
-    GRID_NO VARCHAR2(10),
-    DEPTH_FM VARCHAR2(20),
+    LATDDMM VARCHAR2(50),
+    LONGDDMM VARCHAR2(50),
+    DEPTH VARCHAR2(20),
     SOAK_DAYS VARCHAR2(100),
-    VENT_CODE VARCHAR2(100),
-    NUM_VENTS VARCHAR2(50),
-    TRAP_TYPE VARCHAR2(50)
+    SOURCE VARCHAR2(100),
+    NUM_HOOK VARCHAR2(100),
+    TRAP_TYPE VARCHAR2(50),
+    VENT_CD VARCHAR2(100),
+    NUM_VENTS VARCHAR2(50)
+
 )")
 
+  # Execute the SQL statement to create table
+  dbSendQuery(con, sql_statement)
+}
+
+  table_name <- "TRIP_INFO"
+  ## look for existing table
+  query <- paste("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table' AND name='", table_name, "'", sep = "")
+  result <- dbGetQuery(con, query)
+  # If the table does not exist, create it
+  if (result[[1]] == 0) {
+    print(paste0("Creating new table called: ",table_name))
+    # Define the SQL statement to create the table
+    sql_statement <- paste0("
+    CREATE TABLE ",table_name," (
+    TRIP_ID VARCHAR2(50),
+    TRIP VARCHAR2(50),
+    OWNER_GROUP VARCHAR2(50),
+    VESSEL_NAME VARCHAR2(50),
+    VESSEL_NO VARCHAR2(50),
+    LICENSE_NO VARCHAR2(50),
+    PORT_NAME  VARCHAR2(50),
+    BOARD_DATE VARCHAR2(50),
+    LANDING_DATE VARCHAR2(50),
+    SAMPLER_NAME VARCHAR2(50),
+    COMAREA_ID VARCHAR2(50),
+    CAPTAIN VARCHAR2(50),
+    MARFIS_LICENSE_NO VARCHAR2(50),
+    CREATED_BY VARCHAR2(50),
+    CREATED_DATE VARCHAR2(50)
+)")
 
   # Execute the SQL statement to create table
   dbSendQuery(con, sql_statement)
@@ -229,8 +274,14 @@ tags$script(HTML("
 # ),
 
 
+fluidRow(
+  div(
+    class = "title-with-button",
+    titlePanel("TRIP INFO"),
+    actionButton("submit.trip", "Finished, Submit Trip!")
+  )
+  ),
 
-  titlePanel("TRIP INFO"),
   fluidRow(
     column(1, dateInput("board.date", "BOARDING DATE",value = NA)),
     column(1, dateInput("land.date", "LANDING DATE",value = NA)),
@@ -239,7 +290,7 @@ tags$script(HTML("
 
   ),
   fluidRow(
-    column(1, numericInput("licence.num", "LICENSE #", value = 0)),
+    column(1, numericInput("license.num", "LICENSE #", value = NA)),
     column(2, textInput("captain.name", "CAPTAIN NAME")),
     column(2, textInput("sampler.name", "SAMPLER NAME")),
     column(1, selectInput("lfa", "LFA:",choices = c("","L27", "L28","L29","L30","L31A","L31B","L32","L33","L34","L35","L36","L37","L38","L38B","L41")))
@@ -261,16 +312,16 @@ fluidRow(
 ),
 
 div(class = "compact-row",
-    div(class= "compact-input", numericInput("set.num", "TRAWL / STRING#",value = 0, min = 0)),
-    div(class= "compact-input", numericInput("num.traps", "#TRAPS IN SET",value = 0, min = 0)),
+    div(class= "compact-input", numericInput("set.num", "TRAWL / STRING#",value = NA, min = 0)),
+    div(class= "compact-input", numericInput("num.traps", "#TRAPS IN SET",value = NA, min = 0)),
     div(class = "mediumwide-input", numericInput("lat", "LATITUDE (DDMM.MM)", value = NULL, max = 9059.99, min = -9059.99, step = 0.01)),
     div(class = "mediumwide-input", numericInput("lon", "LONGITUDE (DDMM.MM)", value = NULL, max = 18059.99, min = -18059.99, step = 0.01)),
     div(class= "compact-input", numericInput("grid.num", "GRID NO", value = NULL)),
     div(class= "compact-input", numericInput("depth", "DEPTH (FM)", value = NULL, min = 0)),
     div(class= "compact-input", numericInput("soak.days", "SOAK DAYS", value = NULL, min = 0)),
-    div(class= "compact-input", numericInput("vent.code", "VENT CODE", value = NULL)),
-    div(class= "compact-input", numericInput("num.vents", "# OF VENTS", value = NULL, min = 0)),
-    div(class= "compact-input", textInput("trap.type", "TRAP TYPE", value = NULL))
+    div(class= "compact-input", textInput("trap.type", "TRAP TYPE", value = NULL)),
+    div(class= "compact-input", numericInput("vent.size", "VENT SIZE (CODE)", value = NULL)),
+    div(class= "compact-input", numericInput("num.vents", "# OF VENTS", value = NULL, min = 0))
   ),
 
  fluidRow(),
@@ -285,7 +336,7 @@ fluidRow(
 
 fluidRow(
   column(1, numericInput("trap.num", "TRAP NO",value = NA, min = 0)),
-  column(1, textInput("bait.code1", "BAIT CD1",value = "")),
+  column(1, textInput("bait.code", "BAIT CD",value = "")),
   column(1, textInput("bait.code2", "BAIT CD2",value = "")),
   column(1, textInput("bait.code3", "BAIT CD3",value = "")),
   column(2, textInput("bait.type1", "BAIT TYPE1",value = "")),
@@ -305,6 +356,11 @@ fluidRow(
 
 server <- function(input, output, session) {
 
+  ##set relational columns
+  trip.id = 1
+  set.id = 0
+  trap.id = 0
+
 
   ## create Trip code when enough info is entered
   observeEvent(
@@ -313,48 +369,6 @@ server <- function(input, output, session) {
       req(input$vessel.num, input$board.date)
         board.date <- format(input$board.date, "%d%m%y")
         updateTextInput(session, "trip.code", value = paste0(input$vessel.num,"-",board.date))
-  })
-
-
-  ## when set info is submitted
-  observeEvent(input$next.set, {
-
-    # Initialize database connection
-    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
-
-    set.dat <- data.frame(
-      input$trip.code,
-      input$set.num,
-      input$num.traps,
-      input$lat,
-      input$lon,
-      input$grid.num,
-      input$depth,
-      input$soak.days,
-      input$vent.code,
-      input$num.vents,
-      input$trap.type
-    )
-    set_columns <- dbListFields(db, "SET_INFO")
-    colnames(set.dat) = set_columns
-    dbWriteTable(db, "SET_INFO", set.dat, append = TRUE, row.names = FALSE)
-
-    # Close the database connection
-    dbDisconnect(db)
-    print("database updated")
-
-    # Clear input fields for SET INFO
-    updateNumericInput(session, "set.num", value = NA)
-    updateNumericInput(session, "num.traps", value = NA)
-    updateNumericInput(session, "lat", value = NA)
-    updateNumericInput(session, "lon", value = NA)
-    updateNumericInput(session, "grid.num", value = NA)
-    updateNumericInput(session, "depth", value = NA)
-    updateNumericInput(session, "soak.days", value = NA)
-    updateNumericInput(session, "vent.code", value = NA)
-    updateNumericInput(session, "num.vents", value = NA)
-    updateTextInput(session, "trap.type", value = "")
-
   })
 
 
@@ -382,34 +396,34 @@ server <- function(input, output, session) {
             numericInput(paste0("length_", row_id), "LENGTH", value = NA, min = 0)
         ),
         div(class = "compact-input",
-            selectInput(paste0("sex_", row_id), "SEX", choices = c("", 1, 2, 3))
+            numericInput(paste0("sex_", row_id), "SEX", min = 1, max = 3, value = NA)
         ),
         div(class = "compact-input",
-            selectInput(paste0("shell_", row_id), "SHELL HARD", choices = c("", 1, 2, 3, 4, 5, 6, 7))
+            numericInput(paste0("shell_", row_id), "SHELL HARD", min = 1, max = 7, value = NA)
         ),
         div(class = "compact-input",
-            selectInput(paste0("cond_", row_id), "CONDITION", choices = c("", 0, 1, 2, 3, 4, 5, 6, 7))
+            numericInput(paste0("cond_", row_id), "CONDITION", min =0, max = 7,value = NA)
         ),
         div(class = "compact-input",
             numericInput(paste0("disease_", row_id), "SHELL DISEASE", value = NA, min = 0)
         ),
         div(class = "compact-input",
-            selectInput(paste0("egg_", row_id), "EGG STAGE", choices = c("", 1, 2, 3, 4))
+            numericInput(paste0("egg_", row_id), "EGG STAGE", min = 1, max = 4, value = NA)
         ),
         div(class = "compact-input",
             numericInput(paste0("clutch_", row_id), "CLUTCH %", value = NA, min = 0, max = 100)
         ),
         div(class = "compact-input",
-            selectInput(paste0("vnotch_", row_id), "VNOTCH", choices = c("", 0, 1, 2, 3, 4, 5))
+            numericInput(paste0("vnotch_", row_id), "VNOTCH", min = 0, max = 5, value = NA)
         ),
         div(class = "compact-input",
-            selectInput(paste0("kept_", row_id), "KEPT", choices = c("", 0, 1))
+            numericInput(paste0("kept_", row_id), "KEPT", min = 0, max = 1, value = NA)
         ),
         div(class = "compact-input",
             numericInput(paste0("abund_", row_id), "ABUNDANCE", value = NA, min = 0)
         ),
         div(class = "compact-input",
-            selectInput(paste0("cull_", row_id), "CULL", choices = c("", 1, 2, 3))
+            numericInput(paste0("cull_", row_id), "CULL", min = 1, max = 3, value = NA)
         )
     )
   }
@@ -442,8 +456,13 @@ server <- function(input, output, session) {
   })
 
 
-  # Save data when "next.trap" button is clicked
+  # When "next.trap" button is clicked
   observeEvent(input$next.trap, {
+
+    ## define IDs for relational columns
+    trap.id = trap.id+1
+    set.id = input$set.num
+
     # Initialize database connection
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
@@ -452,7 +471,9 @@ server <- function(input, output, session) {
     # Loop through each row and collect data for insertion
     for (row_id in row_ids()) {
       data <- data.frame(
+        trap.id = trap.id,
         trap_num = input[[paste0("trap.num_", row_id)]],
+        fish_num = row_id,
         species_code = input[[paste0("spec.code_", row_id)]],
         common = input[[paste0("common_", row_id)]],
         length = input[[paste0("length_", row_id)]],
@@ -465,7 +486,8 @@ server <- function(input, output, session) {
         vnotch = input[[paste0("vnotch_", row_id)]],
         kept = input[[paste0("kept_", row_id)]],
         abundance = input[[paste0("abund_", row_id)]],
-        cull = input[[paste0("cull_", row_id)]]
+        cull = input[[paste0("cull_", row_id)]],
+        release = NA
       )
 
       # Insert data into the database
@@ -478,8 +500,11 @@ server <- function(input, output, session) {
     ## TRAP Data
     trap_columns <- dbListFields(db, "TRAP_INFO")
     t.dat <- data.frame(
+      set.id,
+      input$set.num,
+      trap.id,
       input$trap.num,
-      input$bait.code1,
+      input$bait.code,
       input$bait.code2,
       input$bait.code3,
       input$bait.type1,
@@ -496,7 +521,7 @@ server <- function(input, output, session) {
 
     # Clear input fields for Trap and Fish INFO
     updateNumericInput(session, "trap.num", value = NA)
-    updateNumericInput(session, "bait.code1", value = "")
+    updateNumericInput(session, "bait.code", value = "")
     updateNumericInput(session, "bait.code2", value = "")
     updateNumericInput(session, "bait.code3", value = "")
     updateNumericInput(session, "bait.type1", value = "")
@@ -522,6 +547,112 @@ server <- function(input, output, session) {
 
 
   }) ## observe block
+
+
+  ## when "next.set" is clicked
+  observeEvent(input$next.set, {
+
+    ## set relational column values
+    set.id = input$set.num
+
+    # Initialize database connection
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    set.dat <- data.frame(
+      trip.id,
+      set.id,
+      input$set.num,
+      set.code.id = NA,
+      gear.id = NA,
+      spec.code = 2550,
+      input$grid.num,
+      est.catch = NA,
+      input$num.traps,
+      input$lat,
+      input$lon,
+      input$depth,
+      input$soak.days,
+      source = NA,
+      num.hooks = NA,
+      input$trap.type,
+      input$vent.size,
+      input$num.vents
+    )
+    set_columns <- dbListFields(db, "SET_INFO")
+    colnames(set.dat) = set_columns
+    dbWriteTable(db, "SET_INFO", set.dat, append = TRUE, row.names = FALSE)
+
+    # Close the database connection
+    dbDisconnect(db)
+    print("database updated")
+
+    # Clear input fields for SET INFO
+    updateNumericInput(session, "set.num", value = NA)
+    updateNumericInput(session, "num.traps", value = NA)
+    updateNumericInput(session, "lat", value = NA)
+    updateNumericInput(session, "lon", value = NA)
+    updateNumericInput(session, "grid.num", value = NA)
+    updateNumericInput(session, "depth", value = NA)
+    updateNumericInput(session, "soak.days", value = NA)
+    updateNumericInput(session, "vent.size", value = NA)
+    updateNumericInput(session, "num.vents", value = NA)
+    updateTextInput(session, "trap.type", value = "")
+
+  })
+
+
+  ### When Trip is submitted
+  observeEvent(input$submit.trip, {
+
+    # Initialize database connection
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    trip.dat <- data.frame(
+      trip.id,
+      input$trip.code,
+      input$entry.group,
+      input$vessel.name,
+      input$vessel.num,
+      input$license.num,
+      port = NA,
+      input$board.date,
+      input$land.date,
+      input$sampler.name,
+      input$lfa,
+      input$captain.name,
+      marfis.lic = NA,
+      input$entry.name,
+      input$entry.date
+
+    )
+    trip_columns <- dbListFields(db, "TRIP_INFO")
+    colnames(trip.dat) = trip_columns
+    dbWriteTable(db, "TRIP_INFO", trip.dat, append = TRUE, row.names = FALSE)
+
+    # Close the database connection
+    dbDisconnect(db)
+    print("database updated")
+
+    # Clear input fields for TRIP INFO
+    updateTextInput(session, "trip.code", value = "")
+    updateTextInput(session, "entry.group", value = "")
+    updateTextInput(session, "vessel.name", value = "")
+    updateTextInput(session, "vessel.name", value = "")
+    updateNumericInput(session, "vessel.num", value = NA)
+    updateNumericInput(session, "license.num", value = NA)
+    updateDateInput(session, "board.date", value = "")
+    updateDateInput(session, "land.date", value = "")
+    updateTextInput(session, "sampler.name", value = "")
+    updateTextInput(session, "lfa", value = "")
+    updateTextInput(session, "captain.name", value = "")
+    updateTextInput(session, "entry.name", value = "")
+    updateDateInput(session, "entry.date", value = "")
+
+
+  })
+
+
+
 
 
 } ## Server code
