@@ -356,11 +356,8 @@ fluidRow(
 
 server <- function(input, output, session) {
 
-  ##set relational columns
-  trip.id = 1
-  set.id = 0
-  trap.id = 0
-
+  ## set reactive placeholder for trip.ID
+  trip.id <- reactiveVal(NULL)
 
   ## create Trip code when enough info is entered
   observeEvent(
@@ -369,6 +366,10 @@ server <- function(input, output, session) {
       req(input$vessel.num, input$board.date)
         board.date <- format(input$board.date, "%d%m%y")
         updateTextInput(session, "trip.code", value = paste0(input$vessel.num,"-",board.date))
+
+        ## set relational column
+        TRIP.ID <- paste0(input$vessel.num,"_",board.date)
+        trip.id(TRIP.ID)
   })
 
 
@@ -460,8 +461,8 @@ server <- function(input, output, session) {
   observeEvent(input$next.trap, {
 
     ## define IDs for relational columns
-    trap.id = trap.id+1
-    set.id = input$set.num
+    set.id <- paste0(trip.id(),"_",input$set.num)
+    trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
 
     # Initialize database connection
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
@@ -473,7 +474,7 @@ server <- function(input, output, session) {
       data <- data.frame(
         trap.id = trap.id,
         trap_num = input[[paste0("trap.num_", row_id)]],
-        fish_num = row_id,
+        fish_num = gsub("\\D", "", row_id),
         species_code = input[[paste0("spec.code_", row_id)]],
         common = input[[paste0("common_", row_id)]],
         length = input[[paste0("length_", row_id)]],
@@ -514,6 +515,41 @@ server <- function(input, output, session) {
     colnames(t.dat) = trap_columns
     dbWriteTable(db, "TRAP_INFO", t.dat, append = TRUE, row.names = FALSE)
 
+
+    ### Set Data (only update if the set hasn't been created yet)
+    checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
+    set.result <- dbGetQuery(con, checkset)
+    if(nrow(set.result)==0){
+    set.dat <- data.frame(
+      trip.id(),
+      set.id,
+      input$set.num,
+      set.code.id = NA,
+      gear.id = NA,
+      spec.code = 2550,
+      input$grid.num,
+      est.catch = NA,
+      input$num.traps,
+      input$lat,
+      input$lon,
+      input$depth,
+      input$soak.days,
+      source = NA,
+      num.hooks = NA,
+      input$trap.type,
+      input$vent.size,
+      input$num.vents
+    )
+    set_columns <- dbListFields(db, "SET_INFO")
+    colnames(set.dat) = set_columns
+    dbWriteTable(db, "SET_INFO", set.dat, append = TRUE, row.names = FALSE)
+    }
+
+    ## if the set exists, check if the user has made changes to its information
+    if(nrow(set.result)>0){
+
+    }
+
     # Close the database connection
     dbDisconnect(db)
     print("database updated")
@@ -552,42 +588,8 @@ server <- function(input, output, session) {
   ## when "next.set" is clicked
   observeEvent(input$next.set, {
 
-    ## set relational column values
-    set.id = input$set.num
-
-    # Initialize database connection
-    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
-
-    set.dat <- data.frame(
-      trip.id,
-      set.id,
-      input$set.num,
-      set.code.id = NA,
-      gear.id = NA,
-      spec.code = 2550,
-      input$grid.num,
-      est.catch = NA,
-      input$num.traps,
-      input$lat,
-      input$lon,
-      input$depth,
-      input$soak.days,
-      source = NA,
-      num.hooks = NA,
-      input$trap.type,
-      input$vent.size,
-      input$num.vents
-    )
-    set_columns <- dbListFields(db, "SET_INFO")
-    colnames(set.dat) = set_columns
-    dbWriteTable(db, "SET_INFO", set.dat, append = TRUE, row.names = FALSE)
-
-    # Close the database connection
-    dbDisconnect(db)
-    print("database updated")
-
     # Clear input fields for SET INFO
-    updateNumericInput(session, "set.num", value = NA)
+    updateNumericInput(session, "set.num", value = input$set.num+1)
     updateNumericInput(session, "num.traps", value = NA)
     updateNumericInput(session, "lat", value = NA)
     updateNumericInput(session, "lon", value = NA)
