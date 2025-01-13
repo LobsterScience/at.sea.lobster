@@ -283,8 +283,8 @@ fluidRow(
   ),
 
   fluidRow(
-    column(1, dateInput("board.date", "BOARDING DATE",value = NA)),
-    column(1, dateInput("land.date", "LANDING DATE",value = NA)),
+    column(2, dateInput("board.date", "BOARDING DATE",value = NA)),
+    column(2, dateInput("land.date", "LANDING DATE",value = NA)),
     column(2, numericInput("vessel.num", "VESSEL REG #", value = NA, min = 0)),
     column(2, textInput("vessel.name", "VESSEL NAME"))
 
@@ -298,8 +298,8 @@ fluidRow(
   fluidRow(
     column(2, textInput("entry.group", "DATA ENTRY GROUP")),
     column(2, textInput("entry.name", "DATA ENTRY NAME")),
-    column(1, dateInput("entry.date", "DATA ENTRY DATE")),
-    column(1, textInput("trip.code", "TRIP"))
+    column(2, dateInput("entry.date", "DATA ENTRY DATE")),
+    column(2, textInput("trip.code", "TRIP"))
   ),
 
   ################################################## SET INFO
@@ -351,10 +351,151 @@ fluidRow(
 )
 
 
-)
+) ## End of UI
 
 
 server <- function(input, output, session) {
+
+  ## bring in species code list so it only has to be uploaded once
+  spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
+
+
+  ### define database updating functions
+  update.trap <- function(db=NULL, set.id = NULL, trap.id = NULL){
+    ### Trap Data (Insert if the trap hasn't been created yet)
+    checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
+    trap.result <- dbGetQuery(db, checktrap)
+    if(nrow(trap.result)==0){
+      trap_columns <- dbListFields(db, "TRAP_INFO")
+      t.dat <- data.frame(
+        set.id,
+        input$set.num,
+        trap.id,
+        input$trap.num,
+        input$bait.code,
+        input$bait.code2,
+        input$bait.code3,
+        input$bait.type1,
+        input$bait.type2,
+        input$bait.type3
+      )
+      colnames(t.dat) = trap_columns
+      dbWriteTable(db, "TRAP_INFO", t.dat, append = TRUE, row.names = FALSE)
+    }
+
+    ## if the trap exists, update all values if the user has made changes to its information
+    if(nrow(trap.result)>0){
+      update_query <- paste("
+    UPDATE TRAP_INFO
+    SET BAIT_CD = '", input$bait.code, "',
+        BAIT_CD2 = '", input$bait.code2, "',
+        BAIT_CD3 = '", input$bait.code3, "',
+        BAIT_TYPE1 = '", input$bait.type1, "',
+        BAIT_TYPE2 = '", input$bait.type2, "',
+        BAIT_TYPE3 = '", input$bait.type3, "'
+    WHERE TRAP_ID = '", trap.id, "'", sep = "")
+
+      dbExecute(db, update_query)
+    }
+  }
+
+  update.set <- function(db=NULL, trip.id = NULL, set.id = NULL){
+    ### Set Data (Insert if the set hasn't been created yet)
+    checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
+    set.result <- dbGetQuery(db, checkset)
+    if(nrow(set.result)==0){
+      set.dat <- data.frame(
+        trip.id,
+        set.id,
+        input$set.num,
+        set.code.id = NA,
+        gear.id = NA,
+        spec.code = 2550,
+        input$grid.num,
+        est.catch = NA,
+        input$num.traps,
+        input$lat,
+        input$lon,
+        input$depth,
+        input$soak.days,
+        source = NA,
+        num.hooks = NA,
+        input$trap.type,
+        input$vent.size,
+        input$num.vents
+      )
+      set_columns <- dbListFields(db, "SET_INFO")
+      colnames(set.dat) = set_columns
+      dbWriteTable(db, "SET_INFO", set.dat, append = TRUE, row.names = FALSE)
+    }
+
+    ## if the set exists, update all values if the user has made changes to its information
+    if(nrow(set.result)>0){
+      update_query <- paste("
+    UPDATE SET_INFO
+    SET STRATUM_ID = '", input$grid.num, "',
+        NUM_TRAPS = '", input$num.traps, "',
+        LATDDMM = '", input$lat, "',
+        LONGDDMM = '", input$lon, "',
+        DEPTH = '", input$depth, "',
+        SOAK_DAYS = '", input$soak.days, "',
+        TRAP_TYPE = '", input$trap.type, "',
+        VENT_CD = '", input$vent.size, "',
+        NUM_VENTS = '", input$num.vents, "'
+    WHERE FISHSET_ID = '", set.id, "'", sep = "")
+
+      dbExecute(db, update_query)
+    }
+  }
+
+  update.trip <- function(db=NULL, trip.id = NULL){
+    checktrip <- paste("SELECT * FROM TRIP_INFO WHERE TRIP_ID = '",trip.id, "'", sep = "")
+    trip.result <- dbGetQuery(db, checktrip)
+    if(nrow(trip.result)==0){
+      trip.dat <- data.frame(
+        trip.id,
+        input$trip.code,
+        input$entry.group,
+        input$vessel.name,
+        input$vessel.num,
+        input$license.num,
+        port = NA,
+        input$board.date,
+        input$land.date,
+        input$sampler.name,
+        input$lfa,
+        input$captain.name,
+        marfis.lic = NA,
+        input$entry.name,
+        input$entry.date
+
+      )
+      trip_columns <- dbListFields(db, "TRIP_INFO")
+      colnames(trip.dat) = trip_columns
+      dbWriteTable(db, "TRIP_INFO", trip.dat, append = TRUE, row.names = FALSE)
+    }
+
+    if(nrow(trip.result)>0){
+      update_query <- paste("
+    UPDATE TRIP_INFO
+    SET OWNER_GROUP = '", input$entry.group, "',
+        VESSEL_NAME = '", input$vessel.name, "',
+        VESSEL_NO = '", input$vessel.num, "',
+        LICENSE_NO = '", input$license.num, "',
+        BOARD_DATE = '", input$board.date, "',
+        LANDING_DATE = '", input$land.date, "',
+        SAMPLER_NAME = '", input$sampler.name, "',
+        COMAREA_ID = '", input$lfa, "',
+        CAPTAIN = '", input$captain.name, "',
+        CREATED_BY = '", input$entry.name, "',
+        CREATED_DATE = '", input$entry.date, "'
+    WHERE TRIP_ID = '", trip.id, "'", sep = "")
+
+      dbExecute(db, update_query)
+    }
+
+  }
+
 
   ## set reactive placeholder for trip.ID
   trip.id <- reactiveVal(NULL)
@@ -457,12 +598,32 @@ server <- function(input, output, session) {
   })
 
 
+  ## also continually observe spec code input to auto-fill common name
+  observe({
+    # Get the current row IDs
+    current_rows <- row_ids()
+
+    # Create an observer for each spec.code field
+    lapply(current_rows, function(row_id) {
+      observeEvent(input[[paste0("spec.code_", row_id)]], {
+        # Get the updated value
+        new_value <- input[[paste0("spec.code_", row_id)]]
+        ### reference species list to auto fill common name
+        common <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new_value)]
+        updateTextInput(session, paste0("common_", row_id), value = common)
+
+      }, ignoreInit = TRUE)  # Avoid triggering on initialization
+    })
+  })
+
+
   # When "next.trap" button is clicked
   observeEvent(input$next.trap, {
 
     ## define IDs for relational columns
     set.id <- paste0(trip.id(),"_",input$set.num)
     trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
+    trip.id <- trip.id()
 
     # Initialize database connection
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
@@ -499,56 +660,14 @@ server <- function(input, output, session) {
     }
 
     ## TRAP Data
-    trap_columns <- dbListFields(db, "TRAP_INFO")
-    t.dat <- data.frame(
-      set.id,
-      input$set.num,
-      trap.id,
-      input$trap.num,
-      input$bait.code,
-      input$bait.code2,
-      input$bait.code3,
-      input$bait.type1,
-      input$bait.type2,
-      input$bait.type3
-    )
-    colnames(t.dat) = trap_columns
-    dbWriteTable(db, "TRAP_INFO", t.dat, append = TRUE, row.names = FALSE)
+    update.trap(db,set.id = set.id, trap.id = trap.id)
 
+    ## SET Data
+    update.set(db, trip.id = trip.id, set.id = set.id)
 
-    ### Set Data (only update if the set hasn't been created yet)
-    checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
-    set.result <- dbGetQuery(con, checkset)
-    if(nrow(set.result)==0){
-    set.dat <- data.frame(
-      trip.id(),
-      set.id,
-      input$set.num,
-      set.code.id = NA,
-      gear.id = NA,
-      spec.code = 2550,
-      input$grid.num,
-      est.catch = NA,
-      input$num.traps,
-      input$lat,
-      input$lon,
-      input$depth,
-      input$soak.days,
-      source = NA,
-      num.hooks = NA,
-      input$trap.type,
-      input$vent.size,
-      input$num.vents
-    )
-    set_columns <- dbListFields(db, "SET_INFO")
-    colnames(set.dat) = set_columns
-    dbWriteTable(db, "SET_INFO", set.dat, append = TRUE, row.names = FALSE)
-    }
+    ## Trip Data
+    update.trip(db, trip.id)
 
-    ## if the set exists, check if the user has made changes to its information
-    if(nrow(set.result)>0){
-
-    }
 
     # Close the database connection
     dbDisconnect(db)
@@ -567,18 +686,18 @@ server <- function(input, output, session) {
     for (row_id in row_ids()) {
     updateNumericInput(session, paste0("trap.num_", row_id), value = NA)
     updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
-    updateNumericInput(session, paste0("common_", row_id), value = "")
+    updateTextInput(session, paste0("common_", row_id), value = "")
     updateNumericInput(session, paste0("length_", row_id), value = NA)
-    updateNumericInput(session, paste0("sex_", row_id), value = "")
-    updateNumericInput(session, paste0("shell_", row_id), value = "")
-    updateNumericInput(session, paste0("cond_", row_id), value = "")
+    updateNumericInput(session, paste0("sex_", row_id), value = NA)
+    updateNumericInput(session, paste0("shell_", row_id), value = NA)
+    updateNumericInput(session, paste0("cond_", row_id), value = NA)
     updateNumericInput(session, paste0("disease_", row_id), value = NA)
     updateNumericInput(session, paste0("egg_", row_id), value = NA)
-    updateTextInput(session, paste0("clutch_",row_id), value = NA)
-    updateTextInput(session, paste0("vnotch_",row_id), value = "")
-    updateTextInput(session, paste0("kept_",row_id), value = "")
-    updateTextInput(session, paste0("abund_",row_id), value = NA)
-    updateTextInput(session, paste0("cull_",row_id), value = "")
+    updateNumericInput(session, paste0("clutch_",row_id), value = NA)
+    updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
+    updateNumericInput(session, paste0("kept_",row_id), value = NA)
+    updateNumericInput(session, paste0("abund_",row_id), value = NA)
+    updateNumericInput(session, paste0("cull_",row_id), value = NA)
     }
 
 
@@ -587,6 +706,22 @@ server <- function(input, output, session) {
 
   ## when "next.set" is clicked
   observeEvent(input$next.set, {
+
+    ## define IDs for relational columns
+    set.id <- paste0(trip.id(),"_",input$set.num)
+    trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
+    trip.id <- trip.id()
+
+    # Initialize database connection
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    ## Check and update set and trip information again (in case user has made changes to set or no traps were entered for the set)
+    update.set(db, trip.id = trip.id, set.id = set.id)
+    update.trip(db, trip.id)
+
+    # Close the database connection
+    dbDisconnect(db)
+    print("database updated")
 
     # Clear input fields for SET INFO
     updateNumericInput(session, "set.num", value = input$set.num+1)
@@ -606,30 +741,12 @@ server <- function(input, output, session) {
   ### When Trip is submitted
   observeEvent(input$submit.trip, {
 
+    trip.id <- trip.id()
     # Initialize database connection
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
-    trip.dat <- data.frame(
-      trip.id,
-      input$trip.code,
-      input$entry.group,
-      input$vessel.name,
-      input$vessel.num,
-      input$license.num,
-      port = NA,
-      input$board.date,
-      input$land.date,
-      input$sampler.name,
-      input$lfa,
-      input$captain.name,
-      marfis.lic = NA,
-      input$entry.name,
-      input$entry.date
-
-    )
-    trip_columns <- dbListFields(db, "TRIP_INFO")
-    colnames(trip.dat) = trip_columns
-    dbWriteTable(db, "TRIP_INFO", trip.dat, append = TRUE, row.names = FALSE)
+    ##Trip Data (update again in case user has changed info or no sets were submitted for the trip)
+    update.trip(db, trip.id)
 
     # Close the database connection
     dbDisconnect(db)
@@ -642,13 +759,13 @@ server <- function(input, output, session) {
     updateTextInput(session, "vessel.name", value = "")
     updateNumericInput(session, "vessel.num", value = NA)
     updateNumericInput(session, "license.num", value = NA)
-    updateDateInput(session, "board.date", value = "")
-    updateDateInput(session, "land.date", value = "")
+    updateDateInput(session, "board.date", value = NA)
+    updateDateInput(session, "land.date", value = NA)
     updateTextInput(session, "sampler.name", value = "")
     updateTextInput(session, "lfa", value = "")
     updateTextInput(session, "captain.name", value = "")
     updateTextInput(session, "entry.name", value = "")
-    updateDateInput(session, "entry.date", value = "")
+    updateDateInput(session, "entry.date", value = Sys.Date())
 
 
   })
