@@ -336,7 +336,7 @@ fluidRow(
 
 
 div(class = "compact-row",
-    div(class= "compact-input", numericInput("set.num", "TRAWL / STRING#",value = NA, min = 0)),
+    div(class= "compact-input", numericInput("set.num", "TRAWL / STRING#",value = NA, min = -1)),
     div(class= "compact-input", numericInput("num.traps", "#TRAPS IN SET",value = NA, min = 0)),
     div(class = "mediumwide-input", numericInput("lat", "LATITUDE (DDMM.MM)", value = NULL, max = 9059.99, min = -9059.99, step = 0.01)),
     div(class = "mediumwide-input", numericInput("lon", "LONGITUDE (DDMM.MM)", value = NULL, max = 18059.99, min = -18059.99, step = 0.01)),
@@ -703,49 +703,211 @@ server <- function(input, output, session) {
     update.trip(db, trip.id)
 
 
+    ### last step for click, check db for existing data at next trap number and clear fields if there's none
+    new.trap <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num+1)
+    checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
+    trap.result <- dbGetQuery(db, checktrap)
+    if(nrow(trap.result)==0){
+      # Clear input fields for Trap and Fish INFO
+      updateNumericInput(session, "trap.num", value = input$trap.num+1)
+      updateNumericInput(session, "bait.code", value = "")
+      updateNumericInput(session, "bait.code2", value = "")
+      updateNumericInput(session, "bait.code3", value = "")
+      updateNumericInput(session, "bait.type1", value = "")
+      updateNumericInput(session, "bait.type2", value = "")
+      updateNumericInput(session, "bait.type3", value = "")
+
+      for (row_id in row_ids()) {
+        updateNumericInput(session, paste0("trap.num_", row_id), value = input$trap.num+1)
+        updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
+        updateTextInput(session, paste0("common_", row_id), value = "")
+        updateNumericInput(session, paste0("length_", row_id), value = NA)
+        updateNumericInput(session, paste0("sex_", row_id), value = NA)
+        updateNumericInput(session, paste0("shell_", row_id), value = NA)
+        updateNumericInput(session, paste0("cond_", row_id), value = NA)
+        updateNumericInput(session, paste0("disease_", row_id), value = NA)
+        updateNumericInput(session, paste0("egg_", row_id), value = NA)
+        updateNumericInput(session, paste0("clutch_",row_id), value = NA)
+        updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
+        updateNumericInput(session, paste0("kept_",row_id), value = NA)
+        updateNumericInput(session, paste0("abund_",row_id), value = NA)
+        updateNumericInput(session, paste0("cull_",row_id), value = NA)
+      }
+
+    }else{
+
+      # update input fields for Trap and Fish INFO with current selected trap
+      updateNumericInput(session, "trap.num", value = trap.result$TRAP_NO[1])
+      updateNumericInput(session, "bait.code", value = trap.result$BAIT_CD[1])
+      updateNumericInput(session, "bait.code2", value = trap.result$BAIT_CD2[1])
+      updateNumericInput(session, "bait.code3", value = trap.result$BAIT_CD3[1])
+      updateNumericInput(session, "bait.type1", value = trap.result$BAIT_TYPE1[1])
+      updateNumericInput(session, "bait.type2", value = trap.result$BAIT_TYPE2[1])
+      updateNumericInput(session, "bait.type3", value = trap.result$BAIT_TYPE3[1])
+
+      current.fish <-  paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
+      fish.result <- dbGetQuery(db, current.fish)
+
+      ## for fish, first clear all existing rows, then update with correct number of rows for current trap
+      for (row_id in row_ids()) {
+        updateNumericInput(session, paste0("trap.num_", row_id), value = NA)
+        updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
+        updateTextInput(session, paste0("common_", row_id), value = "")
+        updateNumericInput(session, paste0("length_", row_id), value = NA)
+        updateNumericInput(session, paste0("sex_", row_id), value = NA)
+        updateNumericInput(session, paste0("shell_", row_id), value = NA)
+        updateNumericInput(session, paste0("cond_", row_id), value = NA)
+        updateNumericInput(session, paste0("disease_", row_id), value = NA)
+        updateNumericInput(session, paste0("egg_", row_id), value = NA)
+        updateNumericInput(session, paste0("clutch_",row_id), value = NA)
+        updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
+        updateNumericInput(session, paste0("kept_",row_id), value = NA)
+        updateNumericInput(session, paste0("abund_",row_id), value = NA)
+        updateNumericInput(session, paste0("cull_",row_id), value = NA)
+      }
+
+      for(i in nrow(fish.result)){
+        row.ids.vect <- row_ids()
+        new.row <- row.ids.vect[i]
+        updateNumericInput(session, paste0("trap.num_", new.row), value = fish.result$TRAP_NO[i])
+        updateNumericInput(session, paste0("spec.code_", new.row), value = fish.result$SPECCD_ID[i])
+        updateTextInput(session, paste0("common_", new.row), value = fish.result$COMMON[i])
+        updateNumericInput(session, paste0("length_", new.row), value = fish.result$FISH_LENGTH[i])
+        updateNumericInput(session, paste0("sex_", new.row), value = fish.result$SEXCD_ID[i])
+        updateNumericInput(session, paste0("shell_", new.row), value = fish.result$SHELL[i])
+        updateNumericInput(session, paste0("cond_", new.row), value = fish.result$CONDITION[i])
+        updateNumericInput(session, paste0("disease_", new.row), value = fish.result$DISEASE[i])
+        updateNumericInput(session, paste0("egg_", new.row), value = fish.result$EGG_STAGE[i])
+        updateNumericInput(session, paste0("clutch_",new.row), value = fish.result$CLUTCH[i])
+        updateNumericInput(session, paste0("vnotch_",new.row), value = fish.result$VNOTCH[i])
+        updateNumericInput(session, paste0("kept_",new.row), value = fish.result$KEPT[i])
+        updateNumericInput(session, paste0("abund_",new.row), value = fish.result$ABUNDANCE[i])
+        updateNumericInput(session, paste0("cull_",new.row), value = fish.result$CULLS[i])
+      }
+
+
+      }
+
     # Close the database connection
     dbDisconnect(db)
     print("database updated")
 
 
-    # Clear input fields for Trap and Fish INFO
-    updateNumericInput(session, "trap.num", value = NA)
-    updateNumericInput(session, "bait.code", value = "")
-    updateNumericInput(session, "bait.code2", value = "")
-    updateNumericInput(session, "bait.code3", value = "")
-    updateNumericInput(session, "bait.type1", value = "")
-    updateNumericInput(session, "bait.type2", value = "")
-    updateNumericInput(session, "bait.type3", value = "")
-
-    for (row_id in row_ids()) {
-    updateNumericInput(session, paste0("trap.num_", row_id), value = NA)
-    updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
-    updateTextInput(session, paste0("common_", row_id), value = "")
-    updateNumericInput(session, paste0("length_", row_id), value = NA)
-    updateNumericInput(session, paste0("sex_", row_id), value = NA)
-    updateNumericInput(session, paste0("shell_", row_id), value = NA)
-    updateNumericInput(session, paste0("cond_", row_id), value = NA)
-    updateNumericInput(session, paste0("disease_", row_id), value = NA)
-    updateNumericInput(session, paste0("egg_", row_id), value = NA)
-    updateNumericInput(session, paste0("clutch_",row_id), value = NA)
-    updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
-    updateNumericInput(session, paste0("kept_",row_id), value = NA)
-    updateNumericInput(session, paste0("abund_",row_id), value = NA)
-    updateNumericInput(session, paste0("cull_",row_id), value = NA)
-    }
-
-
   }) ## observe block
 
-  ## back button for trap clicked
+  ## back button for trap clicked  (inverse of next trap) ## going backwards doesn't update database, just check for existing data to fill fields
   observeEvent(input$trap.back.btn, {
-    print("Trap Back button clicked!")
+
+    set.id <- paste0(trip.id(),"_",input$set.num)
+
+    # Initialize database connection
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    if(!is.na(input$trap.num) & input$trap.num>0){
+      new.trap <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num-1)
+    }
+    if(is.na(input$trap.num)){
+      trap.max <- paste("SELECT MAX(TRAP_NO) AS MAX_TRAP_NO FROM TRAP_INFO WHERE FISHSET_ID = ","'",set.id,"'", sep = "")
+      max.trap <- dbGetQuery(db, trap.max)
+      new.trap <- paste0(set.id,"_", as.numeric(max.trap))
+    }
+
+    checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
+    trap.result <- dbGetQuery(db, checktrap)
+    if(nrow(trap.result)==0){
+      # Clear input fields for Trap and Fish INFO
+      updateNumericInput(session, "trap.num", value = input$trap.num-1)
+      updateNumericInput(session, "bait.code", value = "")
+      updateNumericInput(session, "bait.code2", value = "")
+      updateNumericInput(session, "bait.code3", value = "")
+      updateNumericInput(session, "bait.type1", value = "")
+      updateNumericInput(session, "bait.type2", value = "")
+      updateNumericInput(session, "bait.type3", value = "")
+
+      for (row_id in row_ids()) {
+        updateNumericInput(session, paste0("trap.num_", row_id), value = input$trap.num-1)
+        updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
+        updateTextInput(session, paste0("common_", row_id), value = "")
+        updateNumericInput(session, paste0("length_", row_id), value = NA)
+        updateNumericInput(session, paste0("sex_", row_id), value = NA)
+        updateNumericInput(session, paste0("shell_", row_id), value = NA)
+        updateNumericInput(session, paste0("cond_", row_id), value = NA)
+        updateNumericInput(session, paste0("disease_", row_id), value = NA)
+        updateNumericInput(session, paste0("egg_", row_id), value = NA)
+        updateNumericInput(session, paste0("clutch_",row_id), value = NA)
+        updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
+        updateNumericInput(session, paste0("kept_",row_id), value = NA)
+        updateNumericInput(session, paste0("abund_",row_id), value = NA)
+        updateNumericInput(session, paste0("cull_",row_id), value = NA)
+      }
+
+
+    }else{
+      ## if there is data for current set, fill fields
+
+      # update input fields for Trap and Fish INFO with current selected trap
+      updateNumericInput(session, "trap.num", value = trap.result$TRAP_NO[1])
+      updateNumericInput(session, "bait.code", value = trap.result$BAIT_CD[1])
+      updateNumericInput(session, "bait.code2", value = trap.result$BAIT_CD2[1])
+      updateNumericInput(session, "bait.code3", value = trap.result$BAIT_CD3[1])
+      updateNumericInput(session, "bait.type1", value = trap.result$BAIT_TYPE1[1])
+      updateNumericInput(session, "bait.type2", value = trap.result$BAIT_TYPE2[1])
+      updateNumericInput(session, "bait.type3", value = trap.result$BAIT_TYPE3[1])
+
+      current.fish <-  paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
+      fish.result <- dbGetQuery(db, current.fish)
+
+      ## for fish, first clear all existing rows, then update with correct number of rows for current trap
+      for (row_id in row_ids()) {
+        updateNumericInput(session, paste0("trap.num_", row_id), value = NA)
+        updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
+        updateTextInput(session, paste0("common_", row_id), value = "")
+        updateNumericInput(session, paste0("length_", row_id), value = NA)
+        updateNumericInput(session, paste0("sex_", row_id), value = NA)
+        updateNumericInput(session, paste0("shell_", row_id), value = NA)
+        updateNumericInput(session, paste0("cond_", row_id), value = NA)
+        updateNumericInput(session, paste0("disease_", row_id), value = NA)
+        updateNumericInput(session, paste0("egg_", row_id), value = NA)
+        updateNumericInput(session, paste0("clutch_",row_id), value = NA)
+        updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
+        updateNumericInput(session, paste0("kept_",row_id), value = NA)
+        updateNumericInput(session, paste0("abund_",row_id), value = NA)
+        updateNumericInput(session, paste0("cull_",row_id), value = NA)
+      }
+
+      for(i in nrow(fish.result)){
+        row.ids.vect <- row_ids()
+        new.row <- row.ids.vect[i]
+        updateNumericInput(session, paste0("trap.num_", new.row), value = fish.result$TRAP_NO[i])
+        updateNumericInput(session, paste0("spec.code_", new.row), value = fish.result$SPECCD_ID[i])
+        updateTextInput(session, paste0("common_", new.row), value = fish.result$COMMON[i])
+        updateNumericInput(session, paste0("length_", new.row), value = fish.result$FISH_LENGTH[i])
+        updateNumericInput(session, paste0("sex_", new.row), value = fish.result$SEXCD_ID[i])
+        updateNumericInput(session, paste0("shell_", new.row), value = fish.result$SHELL[i])
+        updateNumericInput(session, paste0("cond_", new.row), value = fish.result$CONDITION[i])
+        updateNumericInput(session, paste0("disease_", new.row), value = fish.result$DISEASE[i])
+        updateNumericInput(session, paste0("egg_", new.row), value = fish.result$EGG_STAGE[i])
+        updateNumericInput(session, paste0("clutch_",new.row), value = fish.result$CLUTCH[i])
+        updateNumericInput(session, paste0("vnotch_",new.row), value = fish.result$VNOTCH[i])
+        updateNumericInput(session, paste0("kept_",new.row), value = fish.result$KEPT[i])
+        updateNumericInput(session, paste0("abund_",new.row), value = fish.result$ABUNDANCE[i])
+        updateNumericInput(session, paste0("cull_",new.row), value = fish.result$CULLS[i])
+      }
+
+
+    }
+
+    # Close the database connection
+    dbDisconnect(db)
+    print("database updated")
+
   })
 
 
   ## when "next.set" is clicked
   observeEvent(input$next.set, {
 
+    if(!is.na(input$set.num)){
     ## define IDs for relational columns
     set.id <- paste0(trip.id(),"_",input$set.num)
     trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
@@ -757,28 +919,95 @@ server <- function(input, output, session) {
     ## Check and update set and trip information again (in case user has made changes to set or no traps were entered for the set)
     update.set(db, trip.id = trip.id, set.id = set.id)
     update.trip(db, trip.id)
+    if(!is.na(input$trap.num)){
+      update.trap(db, trip.id = trip.id, set.id = set.id, trap.id = trap.id)
+    }
+
+    ### last step for click, check db for existing data at next set number and clear fields if there's none
+    new.set <- paste0(trip.id(),"_",input$set.num+1)
+    checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",new.set, "'", sep = "")
+    set.result <- dbGetQuery(db, checkset)
+    if(nrow(set.result)==0){
+      # Clear input fields for SET INFO
+      updateNumericInput(session, "set.num", value = NA)
+      updateNumericInput(session, "num.traps", value = NA)
+      updateNumericInput(session, "lat", value = NA)
+      updateNumericInput(session, "lon", value = NA)
+      updateNumericInput(session, "grid.num", value = NA)
+      updateNumericInput(session, "depth", value = NA)
+      updateNumericInput(session, "soak.days", value = NA)
+      updateNumericInput(session, "vent.size", value = NA)
+      updateNumericInput(session, "num.vents", value = NA)
+      updateTextInput(session, "trap.type", value = "")
+    }else{
+      ## if there is data for current set, fill fields
+      updateNumericInput(session, "set.num", value = set.result$SET_NO)
+      updateNumericInput(session, "num.traps", value = set.result$NUM_TRAPS)
+      updateNumericInput(session, "lat", value = set.result$LATDDMM)
+      updateNumericInput(session, "lon", value = set.result$LONGDDMM)
+      updateNumericInput(session, "grid.num", value = set.result$STRATUM_ID)
+      updateNumericInput(session, "depth", value = set.result$DEPTH)
+      updateNumericInput(session, "soak.days", value = set.result$SOAK_DAYS)
+      updateNumericInput(session, "vent.size", value = set.result$VENT_CD)
+      updateNumericInput(session, "num.vents", value = set.result$NUM_VENTS)
+      updateTextInput(session, "trap.type", value = set.result$TRAP_TYPE)
+
+    }
+
+    # Close the database connection
+    dbDisconnect(db)
+    print("database updated")
+    }
+
+  })
+
+  ## back button for set clicked (inverse operation of next set button) ## Going backwards does not update database
+  observeEvent(input$set.back.btn, {
+
+    # Initialize database connection
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    if(!is.na(input$set.num) & input$set.num>0){
+      new.set <- paste0(trip.id(),"_",input$set.num-1)
+    }
+    if(is.na(input$set.num)){
+      set.max <- paste("SELECT MAX(SET_NO) AS MAX_SET_NO FROM SET_INFO WHERE TRIP_ID = '",trip.id(), "'", sep = "")
+      max.set <- dbGetQuery(db, set.max)
+      new.set <- paste0(trip.id(),"_", as.numeric(max.set))
+    }
+    checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",new.set, "'", sep = "")
+    set.result <- dbGetQuery(db, checkset)
+    if(nrow(set.result)==0){
+      # Clear input fields for SET INFO
+      updateNumericInput(session, "set.num", value = NA)
+      updateNumericInput(session, "num.traps", value = NA)
+      updateNumericInput(session, "lat", value = NA)
+      updateNumericInput(session, "lon", value = NA)
+      updateNumericInput(session, "grid.num", value = NA)
+      updateNumericInput(session, "depth", value = NA)
+      updateNumericInput(session, "soak.days", value = NA)
+      updateNumericInput(session, "vent.size", value = NA)
+      updateNumericInput(session, "num.vents", value = NA)
+      updateTextInput(session, "trap.type", value = "")
+    }else{
+      ## if there is data for current set, fill fields
+      updateNumericInput(session, "set.num", value = set.result$SET_NO)
+      updateNumericInput(session, "num.traps", value = set.result$NUM_TRAPS)
+      updateNumericInput(session, "lat", value = set.result$LATDDMM)
+      updateNumericInput(session, "lon", value = set.result$LONGDDMM)
+      updateNumericInput(session, "grid.num", value = set.result$STRATUM_ID)
+      updateNumericInput(session, "depth", value = set.result$DEPTH)
+      updateNumericInput(session, "soak.days", value = set.result$SOAK_DAYS)
+      updateNumericInput(session, "vent.size", value = set.result$VENT_CD)
+      updateNumericInput(session, "num.vents", value = set.result$NUM_VENTS)
+      updateTextInput(session, "trap.type", value = set.result$TRAP_TYPE)
+    }
 
     # Close the database connection
     dbDisconnect(db)
     print("database updated")
 
-    # Clear input fields for SET INFO
-    updateNumericInput(session, "set.num", value = input$set.num+1)
-    updateNumericInput(session, "num.traps", value = NA)
-    updateNumericInput(session, "lat", value = NA)
-    updateNumericInput(session, "lon", value = NA)
-    updateNumericInput(session, "grid.num", value = NA)
-    updateNumericInput(session, "depth", value = NA)
-    updateNumericInput(session, "soak.days", value = NA)
-    updateNumericInput(session, "vent.size", value = NA)
-    updateNumericInput(session, "num.vents", value = NA)
-    updateTextInput(session, "trap.type", value = "")
 
-  })
-
-  ## back button for set clicked
-  observeEvent(input$set.back.btn, {
-    print("Set Back button clicked!")
   })
 
 
