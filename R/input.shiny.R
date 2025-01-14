@@ -156,6 +156,7 @@ ui <- fluidPage(
       font-size: 95%; /* Shrink everything to 90% size */
       transform: scale(0.99); /* Zoom out */
       transform-origin: top left; /* Set zoom origin */
+      padding-left: 10px;
     }
   # .shiny-input-container {
   #   margin-bottom: 0; /* Remove bottom margin between elements */
@@ -176,6 +177,9 @@ ui <- fluidPage(
       display: flex;
       flex-wrap: nowrap; /* keeps all elements in one row */
       gap: 7px; /* Adds spacing between elements */
+      margin-left: 0; /* Remove any default margin */
+      padding-left: 0;
+      margin-left: -10px;
    }
     .compact-row .compact-input {
       flex: 0 0 80px; /* Default width for compact inputs */
@@ -210,8 +214,19 @@ ui <- fluidPage(
       display: flex;
       align-items: center;
       justify-content: space-between;
+      width: 100%;
     }
-  ")),
+
+    .title-with-button .title-panel {
+  white-space: nowrap;  /* Prevents title from wrapping */
+  margin-right: auto;  /* Pushes buttons to the right */
+}
+
+.action-button {
+  border: 2px solid #007bff;
+  color: #007bff;
+}
+")),
 
 ## disable mouse scrolling of all numeric fields (too easy to accidentally change value)
 tags$script(HTML("
@@ -243,35 +258,37 @@ tags$script(HTML("
 ")),
 
 
+## back arrow buttons styling
+tags$head(
+  tags$style(HTML("
+      .arrow-button {
+        width: 50px;
+        height: 30px;
+        border: 2px solid #007bff;
+        background-color: white;
+        color: #007bff;
+        border-radius: 0%;
+        text-align: center;
+        font-size: 24px;
+        line-height: 25px;
+        cursor: pointer;
+      }
+      .arrow-button:hover {
+        background-color: #007bff;
+        color: white;
+      }
+      .arrow-left::before {
+        content: '\\2190'; /* Unicode for left arrow */
+      }
+    "))
+),
+tags$script(HTML("
+    $(document).on('click', '.arrow-button', function() {
+      var id = $(this).attr('id');
+      Shiny.setInputValue(id, Math.random());
+    });
+")),
 
-
-### make special class of numeric input that can't be scrolled at all
-# tags$head(
-#   tags$style(HTML("
-#     .no-spinner input[type='number']::-webkit-outer-spin-button,
-#     .no-spinner input[type='number']::-webkit-inner-spin-button {
-#       -webkit-appearance: none;
-#       margin: 0;
-#     }
-#     .no-spinner input[type='number'] {
-#       -moz-appearance: textfield;
-#     }
-#   ")),
-#   tags$script(HTML("
-#     document.addEventListener('DOMContentLoaded', function() {
-#       document.querySelectorAll('.no-spinner input[type=\"number\"]').forEach(function(el) {
-#         // Prevent scrolling with the mouse wheel
-#         el.addEventListener('wheel', function(e) { e.preventDefault(); });
-#         // Prevent increment/decrement with keyboard arrow keys
-#         el.addEventListener('keydown', function(e) {
-#           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-#             e.preventDefault();
-#           }
-#         });
-#       });
-#     });
-#   "))
-# ),
 
 
 fluidRow(
@@ -306,10 +323,17 @@ fluidRow(
 fluidRow(
   div(
     class = "title-with-button",
-    titlePanel("SET INFO"),
+    div(class = "title-panel", titlePanel("SET INFO")),  # Wrap the title in title-panel div
+    column(12, align = "right",  ### arrow button
+           tags$div(
+             class = "arrow-button arrow-left",
+             id = "set.back.btn"
+           )
+    ),
     actionButton("next.set", "Next Set")
   )
 ),
+
 
 div(class = "compact-row",
     div(class= "compact-input", numericInput("set.num", "TRAWL / STRING#",value = NA, min = 0)),
@@ -329,7 +353,13 @@ div(class = "compact-row",
 fluidRow(
   div(
     class = "title-with-button",
-    titlePanel("TRAP INFO"),
+    div(class = "title-panel", titlePanel("TRAP INFO")),  # Wrap the title in title-panel div
+    column(12, align = "right",  ### arrow button
+           tags$div(
+             class = "arrow-button arrow-left",
+             id = "trap.back.btn"
+           )
+    ),
     actionButton("next.trap", "Next Trap")
   )
 ),
@@ -344,7 +374,11 @@ fluidRow(
   column(2, textInput("bait.type3", "BAIT TYPE3",value = ""))
   ),
 
-titlePanel("FISH INFO"),
+fluidRow(     ### use button formatted title class for FISH row just for easy formatting consistency
+  div(
+    class = "title-with-button",
+    div(class = "title-panel", titlePanel("FISH INFO")))
+  ),
 ## dynamically duplicating fish info row:
 fluidRow(
   column(12, uiOutput("dynamicRows")) # Placeholder for dynamically generated rows
@@ -703,6 +737,11 @@ server <- function(input, output, session) {
 
   }) ## observe block
 
+  ## back button for trap clicked
+  observeEvent(input$trap.back.btn, {
+    print("Trap Back button clicked!")
+  })
+
 
   ## when "next.set" is clicked
   observeEvent(input$next.set, {
@@ -735,6 +774,11 @@ server <- function(input, output, session) {
     updateNumericInput(session, "num.vents", value = NA)
     updateTextInput(session, "trap.type", value = "")
 
+  })
+
+  ## back button for set clicked
+  observeEvent(input$set.back.btn, {
+    print("Set Back button clicked!")
   })
 
 
@@ -779,6 +823,36 @@ server <- function(input, output, session) {
 
 
 shinyApp(ui, server)
+
+############### SCRAP
+
+### make special class of numeric input that can't be scrolled at all
+# tags$head(
+#   tags$style(HTML("
+#     .no-spinner input[type='number']::-webkit-outer-spin-button,
+#     .no-spinner input[type='number']::-webkit-inner-spin-button {
+#       -webkit-appearance: none;
+#       margin: 0;
+#     }
+#     .no-spinner input[type='number'] {
+#       -moz-appearance: textfield;
+#     }
+#   ")),
+#   tags$script(HTML("
+#     document.addEventListener('DOMContentLoaded', function() {
+#       document.querySelectorAll('.no-spinner input[type=\"number\"]').forEach(function(el) {
+#         // Prevent scrolling with the mouse wheel
+#         el.addEventListener('wheel', function(e) { e.preventDefault(); });
+#         // Prevent increment/decrement with keyboard arrow keys
+#         el.addEventListener('keydown', function(e) {
+#           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+#             e.preventDefault();
+#           }
+#         });
+#       });
+#     });
+#   "))
+# ),
 
 # library(shiny)
 # #library(shinyjs)
