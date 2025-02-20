@@ -1,7 +1,7 @@
 
 
 #' @title input.trip
-#' @import dplyr RSQLite shiny svDialogs
+#' @import dplyr RSQLite shiny svDialogs shinyjs
 #' @description Creates GUI for entering bycatch data by trip
 #' @export
 
@@ -149,6 +149,8 @@ if (result[[1]] == 0) {
 ######## SHINY CODE
 
 ui <- fluidPage(
+
+  useShinyjs(), ##necessary for delay functions to work
 
 # reduce general sizing / decrease padding between input fields /manage opacity
   tags$style(HTML("
@@ -395,8 +397,73 @@ server <- function(input, output, session) {
 
 
   ### define database updating functions
+  ##FISH
+  update.fish <- function(db=NULL, trap.id = NULL){
+
+  fish_columns <- dbListFields(db, "FISH_INFO")
+  # Loop through each row and collect data for insertion
+  for (row_id in row_ids()) {
+
+    fish_num = gsub("\\D", "", row_id)
+
+    data <- data.frame(
+      trap.id = trap.id,
+      trap_num = input[[paste0("trap.num_", row_id)]],
+      fish_num = fish_num,
+      species_code = input[[paste0("spec.code_", row_id)]],
+      common = input[[paste0("common_", row_id)]],
+      length = input[[paste0("length_", row_id)]],
+      sex = input[[paste0("sex_", row_id)]],
+      shell = input[[paste0("shell_", row_id)]],
+      condition = input[[paste0("cond_", row_id)]],
+      disease = input[[paste0("disease_", row_id)]],
+      egg_stage = input[[paste0("egg_", row_id)]],
+      clutch_percent = input[[paste0("clutch_", row_id)]],
+      vnotch = input[[paste0("vnotch_", row_id)]],
+      kept = input[[paste0("kept_", row_id)]],
+      abundance = input[[paste0("abund_", row_id)]],
+      cull = input[[paste0("cull_", row_id)]],
+      release = NA
+    )
+
+    # Insert data into the database (upload if no existing fish, update if fish found)
+    checkfish <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "' AND FISH_NO = '",fish_num,"'", sep = "")
+    fish.result <- dbGetQuery(db, checkfish)
+    if(nrow(fish.result)==0){
+    data[data == ""] <- NA
+    data <- data %>% filter(!species_code %in% NA) ### remove last unfilled row where species code wasn't added
+    colnames(data) = fish_columns
+    dbWriteTable(db, "FISH_INFO", data, append = TRUE, row.names = FALSE)
+    }
+
+    if(nrow(fish.result)>0){
+      update_query <- paste("
+    UPDATE FISH_INFO
+    SET SPECCD_ID = '", data$species_code, "',
+        COMMON = '", data$common, "',
+        FISH_LENGTH = '", data$length, "',
+        SEXCD_ID = '", data$sex, "',
+        SHELL = '", data$shell, "',
+        CONDITION = '", data$condition, "',
+        DISEASE = '", data$disease, "',
+        EGG_STAGE = '", data$egg_stage, "',
+        CLUTCH = '", data$clutch_percent, "',
+        VNOTCH = '", data$vnotch, "',
+        KEPT = '", data$kept, "',
+        ABUNDANCE = '", data$abundance, "',
+        CULLS = '", data$cull, "',
+        RELEASE_CD = '", data$release, "'
+    WHERE FISH_NO = '", fish_num, "' AND TRAP_ID = '",trap.id,"'", sep = "")
+
+      dbExecute(db, update_query)
+    }
+    ####################################
+
+  }
+  }
+
+  ### TRAP (Insert if the trap hasn't been created yet)
   update.trap <- function(db=NULL, set.id = NULL, trap.id = NULL){
-    ### Trap Data (Insert if the trap hasn't been created yet)
     checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     trap.result <- dbGetQuery(db, checktrap)
     if(nrow(trap.result)==0){
@@ -433,8 +500,8 @@ server <- function(input, output, session) {
     }
   }
 
+  ### SET (Insert if the set hasn't been created yet)
   update.set <- function(db=NULL, trip.id = NULL, set.id = NULL){
-    ### Set Data (Insert if the set hasn't been created yet)
     checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
     set.result <- dbGetQuery(db, checkset)
     if(nrow(set.result)==0){
@@ -482,6 +549,7 @@ server <- function(input, output, session) {
     }
   }
 
+  ### TRIP
   update.trip <- function(db=NULL, trip.id = NULL){
     checktrip <- paste("SELECT * FROM TRIP_INFO WHERE TRIP_ID = '",trip.id, "'", sep = "")
     trip.result <- dbGetQuery(db, checktrip)
@@ -530,9 +598,11 @@ server <- function(input, output, session) {
 
   }
 
+  ###### END OF DB UPDATING FUNCTIONS
 
   ## set reactive placeholder for trip.ID
   trip.id <- reactiveVal(NULL)
+
 
   ## create Trip code when enough info is entered
   observeEvent(
@@ -554,6 +624,7 @@ server <- function(input, output, session) {
 
   # Reactive values to store row data
   row_data <- reactiveValues(data = list())
+
 
   # Template for a row
   create_row <- function(row_id) {
@@ -604,6 +675,11 @@ server <- function(input, output, session) {
     )
   }
 
+  # Add initial row to UI
+  observe({
+    insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row("row_1"))
+  })
+
   observe({
     req(input$trap.num) # Ensure trap.num has a value
     # Get current row IDs
@@ -614,21 +690,15 @@ server <- function(input, output, session) {
     })
   })
 
-
-  # Add initial row to UI
-  observe({
-    insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row("row_1"))
-  })
-
   # Observe the species code of the last row to add a new row
-  observeEvent(input[[paste0("spec.code_", tail(row_ids(), 1))]], {
-    last_id <- tail(row_ids(), 1)
-    if (!is.null(input[[paste0("spec.code_", last_id)]]) &
-        !is.na(input[[paste0("spec.code_", last_id)]])) {
-      new_id <- paste0("row_", length(row_ids()) + 1)
-      row_ids(c(row_ids(), new_id))
-      insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row(new_id))
-    }
+    observeEvent(input[[paste0("spec.code_", tail(row_ids(), 1))]], {
+      last_id <- tail(row_ids(), 1)
+      if (!is.null(input[[paste0("spec.code_", last_id)]]) &
+          !is.na(input[[paste0("spec.code_", last_id)]])) {
+        new_id <- paste0("row_", length(row_ids()) + 1)
+        row_ids(c(row_ids(), new_id))
+        insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row(new_id))
+      }
   })
 
 
@@ -651,6 +721,7 @@ server <- function(input, output, session) {
   })
 
 
+  ## SUBMIT LEVEL 1
   # When "next.trap" button is clicked
   observeEvent(input$next.trap, {
 
@@ -662,44 +733,12 @@ server <- function(input, output, session) {
     # Initialize database connection
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
-    ##Fish Data
-    fish_columns <- dbListFields(db, "FISH_INFO")
-    # Loop through each row and collect data for insertion
-    for (row_id in row_ids()) {
-      data <- data.frame(
-        trap.id = trap.id,
-        trap_num = input[[paste0("trap.num_", row_id)]],
-        fish_num = gsub("\\D", "", row_id),
-        species_code = input[[paste0("spec.code_", row_id)]],
-        common = input[[paste0("common_", row_id)]],
-        length = input[[paste0("length_", row_id)]],
-        sex = input[[paste0("sex_", row_id)]],
-        shell = input[[paste0("shell_", row_id)]],
-        condition = input[[paste0("cond_", row_id)]],
-        disease = input[[paste0("disease_", row_id)]],
-        egg_stage = input[[paste0("egg_", row_id)]],
-        clutch_percent = input[[paste0("clutch_", row_id)]],
-        vnotch = input[[paste0("vnotch_", row_id)]],
-        kept = input[[paste0("kept_", row_id)]],
-        abundance = input[[paste0("abund_", row_id)]],
-        cull = input[[paste0("cull_", row_id)]],
-        release = NA
-      )
-
-      # Insert data into the database
-      data[data == ""] <- NA
-      data <- data %>% filter(!species_code %in% NA) ### remove last unfilled row where species code wasn't added
-      colnames(data) = fish_columns
-      dbWriteTable(db, "FISH_INFO", data, append = TRUE, row.names = FALSE)
-    }
-
-    ## TRAP Data
+    ## Update downstream data
     update.trap(db,set.id = set.id, trap.id = trap.id)
+    update.fish(db, trap.id = trap.id)
 
-    ## SET Data
+    ## update upstream data
     update.set(db, trip.id = trip.id, set.id = set.id)
-
-    ## Trip Data
     update.trip(db, trip.id)
 
 
@@ -707,7 +746,13 @@ server <- function(input, output, session) {
     new.trap <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num+1)
     checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
     trap.result <- dbGetQuery(db, checktrap)
+
     if(nrow(trap.result)==0){
+
+      # Close the database connection
+      dbDisconnect(db)
+      print("database updated")
+
       # Clear input fields for Trap and Fish INFO
       updateNumericInput(session, "trap.num", value = input$trap.num+1)
       updateNumericInput(session, "bait.code", value = "")
@@ -734,8 +779,21 @@ server <- function(input, output, session) {
         updateNumericInput(session, paste0("cull_",row_id), value = NA)
       }
 
-    }else{
+      ##clear all (except 1st) fish rows
+      # delay(1, {
+      #   current_rows <- row_ids()
+      #   lapply(current_rows, function(row_id) {
+      #     removeUI(selector = paste0("#row_container_", row_id))
+      #     insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row("row_1"))
+      #   })
+      # })
 
+
+       # row_ids(c("row_1"))  # Explicitly reset tracked row IDs
+
+
+    }else{
+## if there's existing data for the next trap (trap or fish)
       # update input fields for Trap and Fish INFO with current selected trap
       updateNumericInput(session, "trap.num", value = trap.result$TRAP_NO[1])
       updateNumericInput(session, "bait.code", value = trap.result$BAIT_CD[1])
@@ -745,11 +803,30 @@ server <- function(input, output, session) {
       updateNumericInput(session, "bait.type2", value = trap.result$BAIT_TYPE2[1])
       updateNumericInput(session, "bait.type3", value = trap.result$BAIT_TYPE3[1])
 
+      # ## for fish, match row number to existing fish in db, then update with the existing fish
       current.fish <-  paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
       fish.result <- dbGetQuery(db, current.fish)
+      # Close the database connection
+      dbDisconnect(db)
 
-      ## for fish, first clear all existing rows, then update with correct number of rows for current trap
-      for (row_id in row_ids()) {
+
+      ## Determine number of rows needed
+      num_fish_rows <- nrow(fish.result)
+      current_rows <- row_ids()
+      num_current_rows <- length(current_rows)
+
+      ## Add more rows if needed
+      if (num_current_rows < num_fish_rows) {
+        rows_needed <- num_fish_rows - num_current_rows
+        for (i in seq_len(rows_needed)) {
+          new_row_id <- paste0("row_", num_current_rows + i)
+          row_ids(c(row_ids(), new_row_id))
+          insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row(new_row_id))
+        }
+      }
+
+      ## Clear all existing rows
+      lapply(row_ids(), function(row_id) {
         updateNumericInput(session, paste0("trap.num_", row_id), value = NA)
         updateNumericInput(session, paste0("spec.code_", row_id), value = NA)
         updateTextInput(session, paste0("common_", row_id), value = "")
@@ -759,41 +836,43 @@ server <- function(input, output, session) {
         updateNumericInput(session, paste0("cond_", row_id), value = NA)
         updateNumericInput(session, paste0("disease_", row_id), value = NA)
         updateNumericInput(session, paste0("egg_", row_id), value = NA)
-        updateNumericInput(session, paste0("clutch_",row_id), value = NA)
-        updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
-        updateNumericInput(session, paste0("kept_",row_id), value = NA)
-        updateNumericInput(session, paste0("abund_",row_id), value = NA)
-        updateNumericInput(session, paste0("cull_",row_id), value = NA)
-      }
+        updateNumericInput(session, paste0("clutch_", row_id), value = NA)
+        updateNumericInput(session, paste0("vnotch_", row_id), value = NA)
+        updateNumericInput(session, paste0("kept_", row_id), value = NA)
+        updateNumericInput(session, paste0("abund_", row_id), value = NA)
+        updateNumericInput(session, paste0("cull_", row_id), value = NA)
+      })
 
-      for(i in nrow(fish.result)){
+
+      delay(10,{
         row.ids.vect <- row_ids()
-        new.row <- row.ids.vect[i]
-        updateNumericInput(session, paste0("trap.num_", new.row), value = fish.result$TRAP_NO[i])
-        updateNumericInput(session, paste0("spec.code_", new.row), value = fish.result$SPECCD_ID[i])
-        updateTextInput(session, paste0("common_", new.row), value = fish.result$COMMON[i])
-        updateNumericInput(session, paste0("length_", new.row), value = fish.result$FISH_LENGTH[i])
-        updateNumericInput(session, paste0("sex_", new.row), value = fish.result$SEXCD_ID[i])
-        updateNumericInput(session, paste0("shell_", new.row), value = fish.result$SHELL[i])
-        updateNumericInput(session, paste0("cond_", new.row), value = fish.result$CONDITION[i])
-        updateNumericInput(session, paste0("disease_", new.row), value = fish.result$DISEASE[i])
-        updateNumericInput(session, paste0("egg_", new.row), value = fish.result$EGG_STAGE[i])
-        updateNumericInput(session, paste0("clutch_",new.row), value = fish.result$CLUTCH[i])
-        updateNumericInput(session, paste0("vnotch_",new.row), value = fish.result$VNOTCH[i])
-        updateNumericInput(session, paste0("kept_",new.row), value = fish.result$KEPT[i])
-        updateNumericInput(session, paste0("abund_",new.row), value = fish.result$ABUNDANCE[i])
-        updateNumericInput(session, paste0("cull_",new.row), value = fish.result$CULLS[i])
-      }
+        for (i in 1:nrow(fish.result)) {
+          new.row <- row.ids.vect[i]
+          updateNumericInput(session, paste0("trap.num_", new.row), value = fish.result$TRAP_NO[i])
+          updateNumericInput(session, paste0("spec.code_", new.row), value = fish.result$SPECCD_ID[i])
+          updateTextInput(session, paste0("common_", new.row), value = fish.result$COMMON[i])
+          updateNumericInput(session, paste0("length_", new.row), value = fish.result$FISH_LENGTH[i])
+          updateNumericInput(session, paste0("sex_", new.row), value = fish.result$SEXCD_ID[i])
+          updateNumericInput(session, paste0("shell_", new.row), value = fish.result$SHELL[i])
+          updateNumericInput(session, paste0("cond_", new.row), value = fish.result$CONDITION[i])
+          updateNumericInput(session, paste0("disease_", new.row), value = fish.result$DISEASE[i])
+          updateNumericInput(session, paste0("egg_", new.row), value = fish.result$EGG_STAGE[i])
+          updateNumericInput(session, paste0("clutch_", new.row), value = fish.result$CLUTCH[i])
+          updateNumericInput(session, paste0("vnotch_", new.row), value = fish.result$VNOTCH[i])
+          updateNumericInput(session, paste0("kept_", new.row), value = fish.result$KEPT[i])
+          updateNumericInput(session, paste0("abund_", new.row), value = fish.result$ABUNDANCE[i])
+          updateNumericInput(session, paste0("cull_", new.row), value = fish.result$CULLS[i])
+        }
+      })
 
 
-      }
+    }
 
-    # Close the database connection
-    dbDisconnect(db)
-    print("database updated")
+
 
 
   }) ## observe block
+
 
   ## back button for trap clicked  (inverse of next trap) ## going backwards doesn't update database, just check for existing data to fill fields
   observeEvent(input$trap.back.btn, {
@@ -920,7 +999,7 @@ server <- function(input, output, session) {
     update.set(db, trip.id = trip.id, set.id = set.id)
     update.trip(db, trip.id)
     if(!is.na(input$trap.num)){
-      update.trap(db, trip.id = trip.id, set.id = set.id, trap.id = trap.id)
+      update.trap(db, set.id = set.id, trap.id = trap.id)
     }
 
     ### last step for click, check db for existing data at next set number and clear fields if there's none
@@ -1018,8 +1097,10 @@ server <- function(input, output, session) {
     # Initialize database connection
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
-    ##Trip Data (update again in case user has changed info or no sets were submitted for the trip)
+    ##update all downstream data
     update.trip(db, trip.id)
+    update.set(db, trip.id = trip.id, set.id = set.id)
+    update.trap(db, set.id = set.id, trap.id = trap.id)
 
     # Close the database connection
     dbDisconnect(db)
