@@ -396,17 +396,18 @@ server <- function(input, output, session) {
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
 
 
-  ### define database updating functions
+  ### DEFINE DATABASE UPDATING FUNCTIONS
   ##FISH
   update.fish <- function(db=NULL, trap.id = NULL){
 
   fish_columns <- dbListFields(db, "FISH_INFO")
   # Loop through each row and collect data for insertion
+  data <- NULL
   for (row_id in row_ids()) {
 
-    fish_num = gsub("\\D", "", row_id)
+    fish_num <- gsub("\\D", "", row_id)
 
-    data <- data.frame(
+    data.row <- data.frame(
       trap.id = trap.id,
       trap_num = input[[paste0("trap.num_", row_id)]],
       fish_num = fish_num,
@@ -425,41 +426,62 @@ server <- function(input, output, session) {
       cull = input[[paste0("cull_", row_id)]],
       release = NA
     )
-
+    data <- rbind(data,data.row)
+  }
+  data <- data %>% filter(!species_code %in% NA) ### remove last unfilled row where species code wasn't added
     # Insert data into the database (upload if no existing fish, update if fish found)
-    checkfish <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "' AND FISH_NO = '",fish_num,"'", sep = "")
+    checkfish <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     fish.result <- dbGetQuery(db, checkfish)
+    fish.result <- fish.result %>% arrange(FISH_NO) ## make sure fish data is sorted by fish number (because this is equivalent to row# in the app)
     if(nrow(fish.result)==0){
     data[data == ""] <- NA
-    data <- data %>% filter(!species_code %in% NA) ### remove last unfilled row where species code wasn't added
     colnames(data) = fish_columns
-    dbWriteTable(db, "FISH_INFO", data, append = TRUE, row.names = FALSE)
+    print("no fish data found. Adding:")
+    print(data)
+    if(nrow(data)>0){
+      dbWriteTable(db, "FISH_INFO", data, append = TRUE, row.names = FALSE)
+    }
     }
 
     if(nrow(fish.result)>0){
-      update_query <- paste("
+      print("fish data found. Replacement:")
+      print(data)
+      data[data == ""] <- NA
+      if(nrow(data)>0){
+        for(i in 1:nrow(fish.result)){
+          update_query <- paste("
     UPDATE FISH_INFO
-    SET SPECCD_ID = '", data$species_code, "',
-        COMMON = '", data$common, "',
-        FISH_LENGTH = '", data$length, "',
-        SEXCD_ID = '", data$sex, "',
-        SHELL = '", data$shell, "',
-        CONDITION = '", data$condition, "',
-        DISEASE = '", data$disease, "',
-        EGG_STAGE = '", data$egg_stage, "',
-        CLUTCH = '", data$clutch_percent, "',
-        VNOTCH = '", data$vnotch, "',
-        KEPT = '", data$kept, "',
-        ABUNDANCE = '", data$abundance, "',
-        CULLS = '", data$cull, "',
-        RELEASE_CD = '", data$release, "'
-    WHERE FISH_NO = '", fish_num, "' AND TRAP_ID = '",trap.id,"'", sep = "")
+    SET SPECCD_ID = '", data$species_code[i], "',
+        COMMON = '", data$common[i], "',
+        FISH_LENGTH = '", data$length[i], "',
+        SEXCD_ID = '", data$sex[i], "',
+        SHELL = '", data$shell[i], "',
+        CONDITION = '", data$condition[i], "',
+        DISEASE = '", data$disease[i], "',
+        EGG_STAGE = '", data$egg_stage[i], "',
+        CLUTCH = '", data$clutch_percent[i], "',
+        VNOTCH = '", data$vnotch[i], "',
+        KEPT = '", data$kept[i], "',
+        ABUNDANCE = '", data$abundance[i], "',
+        CULLS = '", data$cull[i], "',
+        RELEASE_CD = '", data$release[i], "'
+    WHERE FISH_NO = '", i, "' AND TRAP_ID = '",trap.id,"'", sep = "")
 
-      dbExecute(db, update_query)
-    }
+          dbExecute(db, update_query)
+        }
+        ## then need to add any new additional rows of data that aren't in the database
+        data.add <- data %>% filter(fish_num > nrow(fish.result))
+        if(nrow(data.add)>0){
+          colnames(data.add) = fish_columns
+          dbWriteTable(db, "FISH_INFO", data.add, append = TRUE, row.names = FALSE)
+        }
+
+      } ## replacement rows >0
+      } ## fish data found
+
     ####################################
 
-  }
+
   }
 
   ### TRAP (Insert if the trap hasn't been created yet)
