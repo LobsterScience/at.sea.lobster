@@ -892,10 +892,16 @@ server <- function(input, output, session) {
     trap.id <- NULL
     trip.id <- trip.id()
     continue = T
-    if(!is.null(trip.id) & !is.na(input$set.num) & !is.null(input$set.num)){set.id <- paste0(trip.id(),"_",input$set.num)
-    }else{
-      warning("No Set ID Found!")
+    if(is.null(trip.id)){
+      warning("No TRIP ID Found!")
       continue = F
+    }
+    if(continue){
+      if(!is.null(trip.id) & !is.na(input$set.num) & !is.null(input$set.num)){set.id <- paste0(trip.id(),"_",input$set.num)
+      }else{
+        warning("No Set ID Found!")
+        continue = F
+      }
     }
     if(continue){
       if(!is.null(set.id) & !is.na(input$trap.num) & !is.null(input$trap.num)){trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
