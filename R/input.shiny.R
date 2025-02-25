@@ -640,15 +640,19 @@ server <- function(input, output, session) {
   ## create Trip code when enough info is entered
   observeEvent(
     list(input$vessel.num, input$board.date), {
+      if (length(input$board.date)==0  || is.na(input$vessel.num) || input$vessel.num == "") {
+        updateTextInput(session, "trip.code", value = NA)
+        trip.id(NULL)
+      }
       # This block will run only when both input$vessel.num and input$board.date are not NULL
       req(input$vessel.num, input$board.date)
         board.date <- format(input$board.date, "%d%m%y")
         updateTextInput(session, "trip.code", value = paste0(input$vessel.num,"-",board.date))
-
         ## set relational column
         TRIP.ID <- paste0(input$vessel.num,"_",board.date)
         trip.id(TRIP.ID)
-  })
+  }, ignoreInit = TRUE)
+
 
 
   #### for reactively adding fish Info rows when species code is entered
@@ -761,8 +765,8 @@ server <- function(input, output, session) {
     trip.id <- trip.id()
     set.id <- NULL
     trap.id <- NULL
-    if(!is.null(trip.id)){set.id <- paste0(trip.id(),"_",input$set.num)}
-    if(!is.null(set.id)){trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)}
+    if(!is.null(trip.id) & !is.na(input$set.num) & !is.null(input$set.num)){set.id <- paste0(trip.id(),"_",input$set.num)}
+    if(!is.null(set.id) & !is.na(input$trap.num) & !is.null(input$trap.num)){trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)}
 
     if(!is.null(trip.id) & !is.null(set.id) & !is.null(trap.id)){
       # check database for existing trap
@@ -884,25 +888,41 @@ server <- function(input, output, session) {
   observeEvent(input$next.trap, {
 
     ## define IDs for relational columns
-    set.id <- paste0(trip.id(),"_",input$set.num)
-    trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
+    set.id <- NULL
+    trap.id <- NULL
     trip.id <- trip.id()
+    continue = T
+    if(!is.null(trip.id) & !is.na(input$set.num) & !is.null(input$set.num)){set.id <- paste0(trip.id(),"_",input$set.num)
+    }else{
+      warning("No Set ID Found!")
+      continue = F
+    }
+    if(continue){
+      if(!is.null(set.id) & !is.na(input$trap.num) & !is.null(input$trap.num)){trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
+      }else{
+        warning("No Trap ID Found!")
+        continue = F
+        }
+    }
 
-    # Initialize database connection
-    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+    if(continue){
+      # Initialize database connection
+      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
-    ## Update downstream data
-    update.trap(db,set.id = set.id, trap.id = trap.id)
-    update.fish(db, trap.id = trap.id)
+      ## Update downstream data
+      update.trap(db,set.id = set.id, trap.id = trap.id)
+      update.fish(db, trap.id = trap.id)
 
-    ## update upstream data
-    update.set(db, trip.id = trip.id, set.id = set.id)
-    update.trip(db, trip.id)
+      ## update upstream data
+      update.set(db, trip.id = trip.id, set.id = set.id)
+      update.trip(db, trip.id)
 
-    dbDisconnect(db)
+      dbDisconnect(db)
 
-    ## move to next trap number
-    updateNumericInput(session, "trap.num", value = input$trap.num+1)
+      ## move to next trap number
+      updateNumericInput(session, "trap.num", value = input$trap.num+1)
+
+    }
 
 
   }) ## observeEvent block
@@ -925,6 +945,24 @@ server <- function(input, output, session) {
 
   ## when "next.set" is clicked
   observeEvent(input$next.set, {
+
+    ## define IDs for relational columns
+    set.id <- paste0(trip.id(),"_",input$set.num)
+    trap.id <- paste0(trip.id(),"_",input$set.num,"_",input$trap.num)
+    trip.id <- trip.id()
+
+    # Initialize database connection
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+    ## Update downstream data
+    update.trap(db,set.id = set.id, trap.id = trap.id)
+    update.fish(db, trap.id = trap.id)
+
+    ## update upstream data
+    update.set(db, trip.id = trip.id, set.id = set.id)
+    update.trip(db, trip.id)
+
+    dbDisconnect(db)
 
     if(!is.na(input$set.num)){
     ## define IDs for relational columns
