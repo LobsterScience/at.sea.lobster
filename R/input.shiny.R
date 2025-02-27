@@ -12,6 +12,7 @@ input.trip <- function(){
 
 dlg_message("In the following window, choose the directory where you want your database files to be stored.")
 dat.dir <- dlg_dir(filter = dlg_filters["csv",])$res
+dat.dir.global <<- dat.dir ## for any other functions to reference
 
 ## set connection
 con <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
@@ -653,10 +654,10 @@ server <- function(input, output, session) {
         trip.id(TRIP.ID)
   }, ignoreInit = TRUE)
 
-  ## then, whenever trip code changes, begin set # at 1
+  ## then, whenever trip code changes, begin set # at 1 (or clear if trip code is cleared)
   observeEvent(input$trip.code, {
     if(input$trip.code %in% ""){
-      ## use delay to trigger reset of downstream values
+      ## use delay and change from different value to trigger reset of downstream values
       updateNumericInput(session, "set.num", value = 1)
       delay(5,{
         updateNumericInput(session, "set.num", value = NA)
