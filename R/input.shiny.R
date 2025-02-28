@@ -51,7 +51,8 @@ if (result[[1]] == 0) {
 )")
 
   # Execute the SQL statement to create table
-  dbSendQuery(con, sql_statement)
+  make.tab <- dbSendQuery(con, sql_statement)
+  dbClearResult(make.tab)
 }
 
 
@@ -79,7 +80,8 @@ if (result[[1]] == 0) {
 )")
 
   # Execute the SQL statement to create table
-  dbSendQuery(con, sql_statement)
+  make.tab <- dbSendQuery(con, sql_statement)
+  dbClearResult(make.tab)
 }
 
 table_name <- "SET_INFO"
@@ -114,7 +116,8 @@ if (result[[1]] == 0) {
 )")
 
   # Execute the SQL statement to create table
-  dbSendQuery(con, sql_statement)
+  make.tab <- dbSendQuery(con, sql_statement)
+  dbClearResult(make.tab)
 }
 
   table_name <- "TRIP_INFO"
@@ -145,15 +148,16 @@ if (result[[1]] == 0) {
 )")
 
   # Execute the SQL statement to create table
-  dbSendQuery(con, sql_statement)
+  make.tab <- dbSendQuery(con, sql_statement)
+  dbClearResult(make.tab)
 }
 
 
 ###########################################################################################
-######## SHINY CODE
+######## SHINY CODE vv
 
 
-
+suppressWarnings({
 ui <- fluidPage(
 
   useShinyjs(), ##necessary for delay functions to work
@@ -392,9 +396,9 @@ fluidRow(
   column(12, uiOutput("dynamicRows")) # Placeholder for dynamically generated rows
 )
 
-
 ) ## End of UI
 
+}) ## suppress warnings
 
 
 ####################################################################################################################################
@@ -402,7 +406,7 @@ fluidRow(
 
 
 server <- function(input, output, session) {
-
+suppressWarnings({
   ## bring in species code list so it only has to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
 
@@ -942,7 +946,7 @@ server <- function(input, output, session) {
 
 
   ##  Autofill Update each row's trap.num field with the current input$trap.num value
-  observe({
+  observeEvent(list(input$trap.num, row_ids()), {
     req(input$trap.num) # Ensure trap.num has a value
     delay(10, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
       current_rows <- row_ids()
@@ -1014,20 +1018,21 @@ server <- function(input, output, session) {
     }
 
     if(continue){
-      # Initialize database connection
-      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+      delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
+        # Initialize database connection
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
-      ## Update upstream and downstream data
-      update.trip(db, trip.id)
-      update.set(db, trip.id = trip.id, set.id = set.id)  ###  ^^ upstream
-      update.trap(db,set.id = set.id, trap.id = trap.id)  ###  vv downstream
-      update.fish(db, trap.id = trap.id)
+        ## Update upstream and downstream data
+        update.trip(db, trip.id)
+        update.set(db, trip.id = trip.id, set.id = set.id)  ###  ^^ upstream
+        update.trap(db,set.id = set.id, trap.id = trap.id)  ###  vv downstream
+        update.fish(db, trap.id = trap.id)
 
-      dbDisconnect(db)
+        dbDisconnect(db)
 
-      ## move to next trap number
-      updateNumericInput(session, "trap.num", value = input$trap.num+1)
-
+        ## move to next trap number
+        updateNumericInput(session, "trap.num", value = input$trap.num+1)
+      })
     }
 
 
@@ -1078,22 +1083,24 @@ server <- function(input, output, session) {
     }
 
     if(continue){
-      # Initialize database connection
-      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+      delay(10, {
+        # Initialize database connection
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
 
-      ## update upstream data
-      update.trip(db, trip.id)
-      ## Update downstream data
-      update.set(db, trip.id = trip.id, set.id = set.id)
-      if(!is.null(trap.id)){
-        update.trap(db,set.id = set.id, trap.id = trap.id)
-        update.fish(db, trap.id = trap.id)
-      }
+        ## update upstream data
+        update.trip(db, trip.id)
+        ## Update downstream data
+        update.set(db, trip.id = trip.id, set.id = set.id)
+        if(!is.null(trap.id)){
+          update.trap(db,set.id = set.id, trap.id = trap.id)
+          update.fish(db, trap.id = trap.id)
+        }
 
-      dbDisconnect(db)
+        dbDisconnect(db)
 
-      ## move to next set number
-      updateNumericInput(session, "set.num", value = input$set.num+1)
+        ## move to next set number
+        updateNumericInput(session, "set.num", value = input$set.num+1)
+      })
     }
 
   })
@@ -1112,20 +1119,22 @@ server <- function(input, output, session) {
   observeEvent(input$submit.trip, {
 
     print(paste0("Trip Entered. The data for your trip is in ",dat.dir,"/INPUT_DATA.db"))
-    print("Use check.table to view the data tables.")
+    print("Use check.table() to view the data tables.")
     stopApp()
 
   })
 
 
 
-
+}) ## suppress warning
 
 } ## Server code
 
 
+suppressWarnings({
+  shinyApp(ui, server)
+})
 
-shinyApp(ui, server)
 
 ############### SCRAP
 
