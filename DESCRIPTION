@@ -15,4 +15,5 @@ Imports:
     RSQLite,
     svDialogs,
     shiny,
-    shinyjs
+    shinyjs,
+    shinyFeedback
