@@ -382,9 +382,9 @@ fluidRow(
   column(1, numericInput("bait_code", "BAIT CD",value = NA)),
   column(1, numericInput("bait_code2", "BAIT CD2",value = NA)),
   column(1, numericInput("bait_code3", "BAIT CD3",value = NA)),
-  column(2, textInput("bait_type1", "BAIT TYPE1",value = "")),
-  column(2, textInput("bait_type2", "BAIT TYPE2",value = "")),
-  column(2, textInput("bait_type3", "BAIT TYPE3",value = ""))
+  column(2, numericInput("bait_type1", "BAIT TYPE1",value = NA)),
+  column(2, numericInput("bait_type2", "BAIT TYPE2",value = NA)),
+  column(2, numericInput("bait_type3", "BAIT TYPE3",value = NA))
   ),
 
 fluidRow(     ### use button formatted title class for FISH row just for easy formatting consistency
@@ -824,9 +824,9 @@ suppressWarnings({
         updateNumericInput(session, "bait_code", value = NA)
         updateNumericInput(session, "bait_code2", value = NA)
         updateNumericInput(session, "bait_code3", value = NA)
-        updateTextInput(session, "bait_type1", value = "")
-        updateTextInput(session, "bait_type2", value = "")
-        updateTextInput(session, "bait_type3", value = "")
+        updateNumericInput(session, "bait_type1", value = NA)
+        updateNumericInput(session, "bait_type2", value = NA)
+        updateNumericInput(session, "bait_type3", value = NA)
 
         for (row_id in row_ids()) {
           ##updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)  ## we have a seperate continuous observer for fish row trap number
@@ -850,9 +850,9 @@ suppressWarnings({
         updateNumericInput(session, "bait_code", value = trap.result$BAIT_CD[1])
         updateNumericInput(session, "bait_code2", value = trap.result$BAIT_CD2[1])
         updateNumericInput(session, "bait_code3", value = trap.result$BAIT_CD3[1])
-        updateTextInput(session, "bait_type1", value = trap.result$BAIT_TYPE1[1])
-        updateTextInput(session, "bait_type2", value = trap.result$BAIT_TYPE2[1])
-        updateTextInput(session, "bait_type3", value = trap.result$BAIT_TYPE3[1])
+        updateNumericInput(session, "bait_type1", value = trap.result$BAIT_TYPE1[1])
+        updateNumericInput(session, "bait_type2", value = trap.result$BAIT_TYPE2[1])
+        updateNumericInput(session, "bait_type3", value = trap.result$BAIT_TYPE3[1])
 
         ## for fish, match GUI row number to existing fish rows in db, then update with the existing fish
         db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
@@ -925,9 +925,9 @@ suppressWarnings({
       updateNumericInput(session, "bait_code", value = NA)
       updateNumericInput(session, "bait_code2", value = NA)
       updateNumericInput(session, "bait_code3", value = NA)
-      updateTextInput(session, "bait_type1", value = "")
-      updateTextInput(session, "bait_type2", value = "")
-      updateTextInput(session, "bait_type3", value = "")
+      updateNumericInput(session, "bait_type1", value = "")
+      updateNumericInput(session, "bait_type2", value = "")
+      updateNumericInput(session, "bait_type3", value = "")
 
       for (row_id in row_ids()) {
         updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)
@@ -998,10 +998,6 @@ suppressWarnings({
   # When "next.trap" button is clicked
   observeEvent(input$next_trap, {
 
-    ## performe error checking before allowing submit
-    proceed.trap <- error.check.fish()
-    delay(10, {   ## allow error checking to complete
-      if(proceed.trap){
         ## define IDs for relational columns
         set.id <- NULL
         trap.id <- NULL
@@ -1043,11 +1039,6 @@ suppressWarnings({
             updateNumericInput(session, "trap_num", value = input$trap_num+1)
           })
         }
-
-
-      }## proceed.trap
-
-    })
 
 
 
