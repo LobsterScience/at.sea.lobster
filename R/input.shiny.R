@@ -1142,13 +1142,60 @@ suppressWarnings({
 
 #########  REAL TIME ######################################################################
 
+
+#### TRIP ROWS
+
+## 1 Boarding Date
+## 1:1 No future dates
+  observeEvent(input$board_date,{
+    if(input$board_date > Sys.Date()){
+      showFeedbackDanger("board_date", "Dates can't be in the future!")
+      proceed.any(F)
+    }else {
+      hideFeedback("board_date")
+      proceed.any(T)
+    }
+  },ignoreInit = T)
+
+## 2 Landing Date
+## 2:1 No future dates
+  observeEvent(input$land_date,{
+    if(input$land_date > Sys.Date()){
+      showFeedbackDanger("land_date", "Dates can't be in the future!")
+      proceed.any(F)
+    }else {
+      hideFeedback("land_date")
+      proceed.any(T)
+    }
+  },ignoreInit = T)
+
+
+  #### SET ROW
+
+
+  #### TRAP ROW
+
+  ##  bait code 2
+  ##:1 should only be values in bait code 2 if bait code has values
+  observe({
+    if (input$bait_code %in% c("",NA,NULL) & !input$bait_code2 %in% c("",NA,NULL)) {
+      showFeedbackDanger("bait_code2", "No BAIT CD Entered")
+      proceed.any(F)
+    } else {
+      hideFeedback("bait_code2")
+      proceed.any(T)
+    }
+  })
+
+
+
 #### FISH ROWS
   observe({      ## general observer for row numbers
     current_rows <- row_ids()
 
-## 1  Shell hard
+##   Shell hard
     range1 <- c(NA,1,2,3,4,5,6,7)
-##1:1  Range + should only contain values if species code is lobster (2550)
+##:1  Range + should only contain values if species code is lobster (2550)
     # Create an observer for each spec_code and shell_hard field
     lapply(current_rows, function(row_id) {
       observeEvent(list(input[[paste0("shell_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
@@ -1179,19 +1226,7 @@ suppressWarnings({
   }) ## observer for all fish row data
 
 
-#### TRAP ROW
 
-## 2 bait code 2
-##2:1 should only be values in bait code 2 if bait code has values
-  observe({
-    if (input$bait_code %in% c("",NA,NULL) & !input$bait_code2 %in% c("",NA,NULL)) {
-      showFeedbackDanger("bait_code2", "No BAIT CD Entered")
-      proceed.any(F)
-    } else {
-      hideFeedback("bait_code2")
-      proceed.any(T)
-    }
-  })
 
 
 
