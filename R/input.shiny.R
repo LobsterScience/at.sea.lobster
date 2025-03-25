@@ -315,7 +315,7 @@ fluidRow(
   fluidRow(
     column(2, dateInput("board_date", "BOARDING DATE",value = NA)),
     column(2, dateInput("land_date", "LANDING DATE",value = NA)),
-    column(2, numericInput("vessel_num", "VESSEL REG #", value = NA, min = 0)),
+    column(2, numericInput("vessel_num", "VESSEL REG #", value = NA, min = 0, max = 999999, step = 1)),
     column(2, textInput("vessel_name", "VESSEL NAME"))
 
   ),
@@ -408,6 +408,20 @@ fluidRow(
 
 server <- function(input, output, session) {
 suppressWarnings({
+
+  ############## Java tweaks to input field behaviour
+  observe({
+    runjs('
+      $("#vessel_num").on("input", function() {
+        var value = $(this).val();
+        if (value.length > 6) {
+          $(this).val(value.substring(0, 6));  // Limit input to 6 digits
+        }
+      });
+    ')
+  })
+
+
   ## bring in species code list so it only has to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
 
@@ -721,7 +735,8 @@ suppressWarnings({
       # This block will run only when both input$vessel.num and input$board.date are not NULL
       req(input$vessel_num, input$board_date)
         board.date <- format(input$board_date, "%d%m%y")
-        updateTextInput(session, "trip_code", value = paste0(input$vessel_num,"-",board.date))
+        vrn <- sprintf("%06d",input$vessel_num) ## ensures that the vessel number in TRIP always has 6 digits
+        updateTextInput(session, "trip_code", value = paste0(vrn,"-",board.date))
         ## set relational column
         TRIP.ID <- paste0(input$vessel_num,"_",board.date)
         trip.id(TRIP.ID)
