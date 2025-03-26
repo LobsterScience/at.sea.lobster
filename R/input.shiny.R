@@ -320,7 +320,7 @@ fluidRow(
 
   ),
   fluidRow(
-    column(1, numericInput("license_num", "LICENSE #", value = NA)),
+    column(2, numericInput("license_num", "LICENSE #", value = NA)),
     column(2, textInput("captain_name", "CAPTAIN NAME")),
     column(2, textInput("sampler_name", "SAMPLER NAME")),
     column(1, selectInput("lfa", "LFA:",choices = c("","L27", "L28","L29","L30","L31A","L31B","L32","L33","L34","L35","L36","L37","L38","L38B","L41")))
@@ -408,19 +408,6 @@ fluidRow(
 
 server <- function(input, output, session) {
 suppressWarnings({
-
-  ############## Java tweaks to input field behaviour
-  observe({
-    runjs('
-      $("#vessel_num").on("input", function() {
-        var value = $(this).val();
-        if (value.length > 6) {
-          $(this).val(value.substring(0, 6));  // Limit input to 6 digits
-        }
-      });
-    ')
-  })
-
 
   ## bring in species code list so it only has to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
@@ -1184,6 +1171,89 @@ suppressWarnings({
     }
   },ignoreInit = T)
 
+
+## 3 Vessel Reg #
+##3:1 range  0 - 999999 (make violation impossible)
+  observe({
+    runjs('
+    $("#vessel_num").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      // Limit input to 6 digits
+      if (value.length > 6) {
+        value = value.substring(0, 6);
+      }
+      $(this).val(value);
+    });
+  ')
+  })
+
+## 4 Vessel Name
+## 4:1 range < 40 characters (make violation impossible)
+  observe({
+    runjs('
+      $("#vessel_name").on("input", function() {
+        var value = $(this).val();
+        if (value.length > 40) {
+          $(this).val(value.substring(0, 40));  // Limit input to 40 characters
+        }
+      });
+    ')
+  })
+
+## 5 License #
+## 5:1 range  0 - 999999999 (make violation impossible)
+  observe({
+    runjs('
+    $("#license_num").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      // Limit input to 9 digits
+      if (value.length > 9) {
+        value = value.substring(0, 9);
+      }
+      $(this).val(value);
+    });
+  ')
+  })
+
+## 6 Captain Name
+## 6:1 range < 40 characters (make violation impossible)
+  observe({
+    runjs('
+      $("#captain_name").on("input", function() {
+        var value = $(this).val();
+        if (value.length > 40) {
+          $(this).val(value.substring(0, 40));  // Limit input to 40 characters
+        }
+      });
+    ')
+  })
+
+## 7 Sampler Name
+## 7:1 range < 40 characters (make violation impossible)
+  observe({
+    runjs('
+      $("#sampler_name").on("input", function() {
+        var value = $(this).val();
+        if (value.length > 40) {
+          $(this).val(value.substring(0, 40));  // Limit input to 40 characters
+        }
+      });
+    ')
+  })
+
+## 8 LFA
+## 8:1  Should have value (Warning)
+  observeEvent(input$lfa, {
+    if(input$lfa %in% c(NA,NULL,"")){
+      showFeedbackDanger("lfa", "Warning: No LFA Chosen!")
+    }else{
+      hideFeedback("lfa")
+    }
+  }, ignoreInit = T)
 
   #### SET ROW
 
