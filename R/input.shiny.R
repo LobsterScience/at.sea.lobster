@@ -349,7 +349,7 @@ fluidRow(
 
 
 div(class = "compact-row",
-    div(class= "compact-input", numericInput("set_num", "TRAWL / STRING#",value = NA, min = 0)),
+    div(class= "compact-input", numericInput("set_num", "SET / TRAWL / STRING#",value = NA, min = 0)),
     div(class= "compact-input", numericInput("num_traps", "#TRAPS IN SET",value = NA, min = 0)),
     div(class = "mediumwide-input", numericInput("lat", "LATITUDE (DDMM.MM)", value = NULL, max = 9059.99, min = -9059.99, step = 0.01)),
     div(class = "mediumwide-input", numericInput("lon", "LONGITUDE (DDMM.MM)", value = NULL, max = 18059.99, min = -18059.99, step = 0.01)),
@@ -366,7 +366,7 @@ div(class = "compact-row",
 fluidRow(
   div(
     class = "title-with-button",
-    div(class = "title-panel", titlePanel("TRAP INFO")),  # Wrap the title in title-panel div
+    div(class = "title-panel", titlePanel(HTML("<span style='font-size: 24px;'> TRAP INFO</span> <span style='font-size: 16px;'>*Only traps with bait codes are uploaded when you hit Next...</span>"))),  # Wrap the title in title-panel div
     column(12, align = "right",  ### arrow button
            tags$div(
              class = "arrow-button arrow-left",
@@ -498,6 +498,7 @@ suppressWarnings({
 
   ### TRAP (Insert if the trap hasn't been created yet)
   update.trap <- function(db=NULL, set.id = NULL, trap.id = NULL){
+    if(!is.na(input$bait_code)){  ## don't upload blank traps
     checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     trap.result <- dbGetQuery(db, checktrap)
     if(nrow(trap.result)==0){
@@ -533,6 +534,7 @@ suppressWarnings({
       dbExecute(db, update_query)
     }
     print("Trap table updated")
+    }
   }
 
   ### SET (Insert if the set hasn't been created yet)
@@ -1296,6 +1298,31 @@ suppressWarnings({
       }
   }, ignoreInit = T)
 
+## 13 Set/Trawl/String
+## 13:1 Range >=0
+  observe({
+    runjs('
+    $("#set_num").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
+
+## 14 #Traps in Set
+## 14:1 Range >=0
+  observe({
+    runjs('
+    $("#num_traps").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
 
   #### SET ROW
 
