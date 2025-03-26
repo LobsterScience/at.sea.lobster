@@ -329,7 +329,7 @@ fluidRow(
     column(2, textInput("entry_group", "DATA ENTRY GROUP")),
     column(2, textInput("entry_name", "DATA ENTRY NAME")),
     column(2, dateInput("entry_date", "DATA ENTRY DATE")),
-    column(2, textInput("trip_code", "TRIP"))
+    column(2, textInput("trip_code", "TRIP"), style = "pointer-events: none; opacity: 0.5;")
   ),
 
   ################################################## SET INFO
@@ -1254,6 +1254,48 @@ suppressWarnings({
       hideFeedback("lfa")
     }
   }, ignoreInit = T)
+
+## 9 Data Entry Group
+## 9:1  range < 40 characters (make violation impossible)
+  observe({
+    runjs('
+      $("#entry_group").on("input", function() {
+        var value = $(this).val();
+        if (value.length > 40) {
+          $(this).val(value.substring(0, 40));  // Limit input to 40 characters
+        }
+      });
+    ')
+  })
+
+## 10 Data Entry Name
+## 10:1  range < 40 characters (make violation impossible)
+  observe({
+    runjs('
+      $("#entry_name").on("input", function() {
+        var value = $(this).val();
+        if (value.length > 40) {
+          $(this).val(value.substring(0, 40));  // Limit input to 40 characters
+        }
+      });
+    ')
+  })
+
+## 11 Data Entry Date
+## 11:1 No Restrictions
+
+## 12 Trip
+## 12:1 Must have Value
+  observeEvent(input$trip_code, {
+      if(input$trip_code %in% c(NA,NULL,"")){
+        showFeedbackDanger("trip_code", "Error: No Trip Code!")
+        proceed.any(F)
+      }else{
+        hideFeedback("trip_code")
+        proceed.any(T)
+      }
+  }, ignoreInit = T)
+
 
   #### SET ROW
 
