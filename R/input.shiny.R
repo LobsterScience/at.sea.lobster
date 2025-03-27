@@ -180,7 +180,10 @@ ui <- fluidPage(
   }
        #dynamicRows {
   opacity: 1 !important;
-}
+       }
+  input[type='number'] {
+    padding-right: 3px !important; /* Fixes number scroll arrows to far right */
+  }
  ")),
 
   ### create special classes of compact and wide rows with custom spacing
@@ -379,12 +382,12 @@ fluidRow(
 
 fluidRow(
   column(1, numericInput("trap_num", "TRAP NO",value = NA, min = 0)),
-  column(1, numericInput("bait_code", "BAIT CD",value = NA)),
-  column(1, numericInput("bait_code2", "BAIT CD2",value = NA)),
-  column(1, numericInput("bait_code3", "BAIT CD3",value = NA)),
-  column(2, numericInput("bait_type1", "BAIT TYPE1",value = NA)),
-  column(2, numericInput("bait_type2", "BAIT TYPE2",value = NA)),
-  column(2, numericInput("bait_type3", "BAIT TYPE3",value = NA))
+  column(1, numericInput("bait_code", "BAIT CD",value = NA, min = 0)),
+  column(1, numericInput("bait_code2", "BAIT CD2",value = NA, min = 0)),
+  column(1, numericInput("bait_code3", "BAIT CD3",value = NA, min = 0)),
+  column(2, numericInput("bait_type1", "BAIT TYPE1",value = NA, min = 0)),
+  column(2, numericInput("bait_type2", "BAIT TYPE2",value = NA, min = 0)),
+  column(2, numericInput("bait_type3", "BAIT TYPE3",value = NA, min = 0))
   ),
 
 fluidRow(     ### use button formatted title class for FISH row just for easy formatting consistency
@@ -965,7 +968,7 @@ suppressWarnings({
     })
   })
 
-  # Observe when species code is added to last row and add a new row
+  # Observe when catch species code is added to last row and add a new row
     observeEvent(input[[paste0("spec_code_", tail(row_ids(), 1))]], {
       last_id <- tail(row_ids(), 1)
       if (!is.null(input[[paste0("spec_code_", last_id)]]) &
@@ -976,7 +979,7 @@ suppressWarnings({
       }
   })
 
-  ## also continually observe spec code input to auto-fill common name
+  ## also continually observe catch spec code input to auto-fill common name
   observe({
     current_rows <- row_ids()
     # Create an observer for each spec.code field
@@ -992,7 +995,33 @@ suppressWarnings({
     })
   })
 
+  # ## Also autofill species names for bait codes (subscript)
+  observeEvent(input$bait_code, {
+      if(!input$bait_code %in% c(NA,NULL,"")){
+        hideFeedback("bait_code")
+        new.bait <- input$bait_code
+        b.spec <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait)]
+        showFeedback("bait_code",b.spec)
+      }else{hideFeedback("bait_code")}
+      }, ignoreInit = T)
 
+  observeEvent(input$bait_code2, {
+      if(!input$bait_code2 %in% c(NA,NULL,"")){
+        hideFeedback("bait_code2")
+        new.bait2 <- input$bait_code2
+        b.spec2 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait2)]
+        showFeedback("bait_code2",b.spec2)
+      }else{hideFeedback("bait_code2")}
+  }, ignoreInit = T)
+
+  observeEvent(input$bait_code3, {
+      if(!input$bait_code3 %in% c(NA,NULL,"")){
+        hideFeedback("bait_code3")
+        new.bait3 <- input$bait_code3
+        b.spec3 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait3)]
+        showFeedback("bait_code3",b.spec3)
+      }else{hideFeedback("bait_code3")}
+  }, ignoreInit = T)
 
 
 
@@ -1329,14 +1358,40 @@ suppressWarnings({
 
   #### TRAP ROW
 
-  ##  bait code 2
-  ##:1 should only be values in bait code 2 if bait code has values
+##  bait code 2
+##:1 should only be values in bait code 2 if bait code has values
   observe({
     if (input$bait_code %in% c("",NA,NULL) & !input$bait_code2 %in% c("",NA,NULL)) {
+      hideFeedback("bait_code2")
       showFeedbackDanger("bait_code2", "No BAIT CD Entered")
       proceed.any(F)
     } else {
       hideFeedback("bait_code2")
+      ## need to return species name if it's still needed
+      if(!input$bait_code2 %in% c("",NA,NULL)){
+        new.bait2 <- input$bait_code2
+        b.spec2 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait2)]
+        showFeedback("bait_code2",b.spec2)
+      }
+      proceed.any(T)
+    }
+  })
+
+##  bait code 3
+##:1 should only be values in bait code 3 if bait code2 has values
+  observe({
+    if (input$bait_code2 %in% c("",NA,NULL) & !input$bait_code3 %in% c("",NA,NULL)) {
+      hideFeedback("bait_code3")
+      showFeedbackDanger("bait_code3", "No BAIT CD2 Entered")
+      proceed.any(F)
+    } else {
+      hideFeedback("bait_code3")
+      ## need to return species name if it's still needed
+      if(!input$bait_code3 %in% c("",NA,NULL)){
+        new.bait3 <- input$bait_code3
+        b.spec3 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait3)]
+        showFeedback("bait_code3",b.spec3)
+      }
       proceed.any(T)
     }
   })
