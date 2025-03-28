@@ -1358,6 +1358,18 @@ suppressWarnings({
 
   #### TRAP ROW
 
+##   bait code
+## :1  must have a value if there are fish catch data
+  observeEvent(list(input$bait_code, input$spec_code_row_1),{
+        if (input$bait_code %in% c("",NA,NULL) & !input$spec_code_row_1 %in% c("",NA,NULL)) {
+          showFeedbackDanger("bait_code", "If fish were caught in this trap, it must have bait code!")
+          proceed.any(F)
+        } else {
+          hideFeedback("bait_code")
+          proceed.any(T)
+        }
+      }, ignoreInit = TRUE)
+
 ##  bait code 2
 ##:1 should only be values in bait code 2 if bait code has values
   observe({
@@ -1401,6 +1413,11 @@ suppressWarnings({
 #### FISH ROWS
   observe({      ## general observer for row numbers
     current_rows <- row_ids()
+
+
+##  Species Code
+## :1 rows must be filled sequentially
+
 
 ##   Shell hard
     range1 <- c(NA,1,2,3,4,5,6,7)
