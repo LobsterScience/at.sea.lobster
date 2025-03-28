@@ -359,8 +359,8 @@ div(class = "compact-row",
     div(class= "compact-input", numericInput("grid_num", "GRID NO", value = NULL)),
     div(class= "compact-input", numericInput("depth", "DEPTH (FM)", value = NULL, min = 0)),
     div(class= "compact-input", numericInput("soak_days", "SOAK DAYS", value = NULL, min = 0)),
-    div(class= "compact-input", textInput("trap_type", "TRAP TYPE", value = NULL)),
-    div(class= "compact-input", numericInput("vent_size", "VENT SIZE (CODE)", value = NULL)),
+    div(class= "compact-input", numericInput("trap_type", "TRAP TYPE", value = NA, min = 1, max = 4)),
+    div(class= "compact-input", numericInput("vent_size", "VENT SIZE (CODE)", value = NA, min = 1, max = 5)),
     div(class= "compact-input", numericInput("num_vents", "# OF VENTS", value = NULL, min = 0))
   ),
 
@@ -385,9 +385,9 @@ fluidRow(
   column(1, numericInput("bait_code", "BAIT CD",value = NA, min = 0)),
   column(1, numericInput("bait_code2", "BAIT CD2",value = NA, min = 0)),
   column(1, numericInput("bait_code3", "BAIT CD3",value = NA, min = 0)),
-  column(2, numericInput("bait_type1", "BAIT TYPE1",value = NA, min = 0)),
-  column(2, numericInput("bait_type2", "BAIT TYPE2",value = NA, min = 0)),
-  column(2, numericInput("bait_type3", "BAIT TYPE3",value = NA, min = 0))
+  column(2, numericInput("bait_type1", "BAIT TYPE1",value = NA, min = 1, max = 4)),
+  column(2, numericInput("bait_type2", "BAIT TYPE2",value = NA, min = 1, max = 4)),
+  column(2, numericInput("bait_type3", "BAIT TYPE3",value = NA, min = 1, max = 4))
   ),
 
 fluidRow(     ### use button formatted title class for FISH row just for easy formatting consistency
@@ -412,9 +412,9 @@ fluidRow(
 server <- function(input, output, session) {
 suppressWarnings({
 
-  ## bring in species code list so it only has to be uploaded once
+  ## bring in species and other code lists so they only have to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
-
+  code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
 ####################################################################################################################################
   ### DEFINE DATABASE UPDATING FUNCTIONS (FOR WHEN 'NEXT' BUTTONS ARE CLICKED)
   ##FISH
@@ -1023,8 +1023,46 @@ suppressWarnings({
       }else{hideFeedback("bait_code3")}
   }, ignoreInit = T)
 
+  ## Also autofill code descriptions for Trap Type, Vent size, and Bait Types
+  observeEvent(input$trap_type, {
+    if(!input$trap_type %in% c(NA,NULL,"")){
+      hideFeedback("trap_type")
+      t.type <- code.tab$Name[which(code.tab$Field %in% "Trap Type" & code.tab$Code %in% input$trap_type)]
+      showFeedback("trap_type",t.type)
+    }else{hideFeedback("trap_type")}
+  }, ignoreInit = T)
 
+  observeEvent(input$vent_size, {
+    if(!input$vent_size %in% c(NA,NULL,"")){
+      hideFeedback("vent_size")
+      v.size <- code.tab$Name[which(code.tab$Field %in% "Vent Size" & code.tab$Code %in% input$vent_size)]
+      showFeedback("vent_size",v.size)
+    }else{hideFeedback("vent_size")}
+  }, ignoreInit = T)
 
+  observeEvent(input$bait_type1, {
+    if(!input$bait_type1 %in% c(NA,NULL,"")){
+      hideFeedback("bait_type1")
+      b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type1)]
+      showFeedback("bait_type1",b.type)
+    }else{hideFeedback("bait_type1")}
+  }, ignoreInit = T)
+
+  observeEvent(input$bait_type2, {
+    if(!input$bait_type2 %in% c(NA,NULL,"")){
+      hideFeedback("bait_type2")
+      b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type2)]
+      showFeedback("bait_type2",b.type)
+    }else{hideFeedback("bait_type2")}
+  }, ignoreInit = T)
+
+  observeEvent(input$bait_type3, {
+    if(!input$bait_type3 %in% c(NA,NULL,"")){
+      hideFeedback("bait_type3")
+      b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type3)]
+      showFeedback("bait_type3",b.type)
+    }else{hideFeedback("bait_type3")}
+  }, ignoreInit = T)
 ####################################################################################################################################################
 ##BEGINNING OF INTERACTIVE SERVER CODE (BUTTON CLICKS)
   ## SUBMIT LEVEL 1
