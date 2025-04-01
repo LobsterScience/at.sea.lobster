@@ -975,9 +975,9 @@ suppressWarnings({
       updateNumericInput(session, "bait_code", value = NA)
       updateNumericInput(session, "bait_code2", value = NA)
       updateNumericInput(session, "bait_code3", value = NA)
-      updateNumericInput(session, "bait_type1", value = "")
-      updateNumericInput(session, "bait_type2", value = "")
-      updateNumericInput(session, "bait_type3", value = "")
+      updateNumericInput(session, "bait_type1", value = NA)
+      updateNumericInput(session, "bait_type2", value = NA)
+      updateNumericInput(session, "bait_type3", value = NA)
 
       for (row_id in row_ids()) {
         updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)
@@ -1083,29 +1083,29 @@ suppressWarnings({
     }else{hideFeedback("vent_size")}
   }, ignoreInit = T)
 
-  observeEvent(input$bait_type1, {
-    if(!input$bait_type1 %in% c(NA,NULL,"")){
-      hideFeedback("bait_type1")
-      b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type1)]
-      showFeedback("bait_type1",b.type)
-    }else{hideFeedback("bait_type1")}
-  }, ignoreInit = T)
+  # observeEvent(input$bait_type1, {
+  #   if(!input$bait_type1 %in% c(NA,NULL,"")){
+  #     hideFeedback("bait_type1")
+  #     b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type1)]
+  #     showFeedback("bait_type1",b.type)
+  #   }else{hideFeedback("bait_type1")}
+  # }, ignoreInit = T)
 
-  observeEvent(input$bait_type2, {
-    if(!input$bait_type2 %in% c(NA,NULL,"")){
-      hideFeedback("bait_type2")
-      b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type2)]
-      showFeedback("bait_type2",b.type)
-    }else{hideFeedback("bait_type2")}
-  }, ignoreInit = T)
+  # observeEvent(input$bait_type2, {
+  #   if(!input$bait_type2 %in% c(NA,NULL,"")){
+  #     hideFeedback("bait_type2")
+  #     b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type2)]
+  #     showFeedback("bait_type2",b.type)
+  #   }else{hideFeedback("bait_type2")}
+  # }, ignoreInit = T)
 
-  observeEvent(input$bait_type3, {
-    if(!input$bait_type3 %in% c(NA,NULL,"")){
-      hideFeedback("bait_type3")
-      b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type3)]
-      showFeedback("bait_type3",b.type)
-    }else{hideFeedback("bait_type3")}
-  }, ignoreInit = T)
+  # observeEvent(input$bait_type3, {
+  #   if(!input$bait_type3 %in% c(NA,NULL,"")){
+  #     hideFeedback("bait_type3")
+  #     b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type3)]
+  #     showFeedback("bait_type3",b.type)
+  #   }else{hideFeedback("bait_type3")}
+  # }, ignoreInit = T)
 ####################################################################################################################################################
 ##BEGINNING OF INTERACTIVE SERVER CODE (BUTTON CLICKS)
   ## SUBMIT LEVEL 1
@@ -1489,6 +1489,10 @@ observeEvent(input$trap_type,{
   }else{
     hideFeedback("trap_type")
     checks$check20<- T
+    if(!input$trap_type %in% c(NA,NULL,"")){ ## if error is cleared but there's still a value, need to replenish the lookup table name
+      t.type <- code.tab$Name[which(code.tab$Field %in% "Trap Type" & code.tab$Code %in% input$trap_type)]
+      showFeedback("trap_type",t.type)
+    }
   }
   })
 
@@ -1502,6 +1506,10 @@ observeEvent(input$vent_size,{
   }else{
     hideFeedback("vent_size")
     checks$check21<- T
+    if(!input$vent_size %in% c(NA,NULL,"")){ ## if error is cleared but there's still a value, need to replenish the lookup table name
+      v.size <- code.tab$Name[which(code.tab$Field %in% "Vent Size" & code.tab$Code %in% input$vent_size)]
+      showFeedback("vent_size",v.size)
+    }
   }
 })
 
@@ -1519,20 +1527,41 @@ observe({
 })
 
 
+######## TRAP ROW
 
-  #### TRAP ROW
+
+## 23 Trap No
+## 23:1 range >=0 (Violation impossible)
+observe({
+  runjs('
+    $("#trap_num").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+})
+
 
 ## 24  bait code
-## 24:1  must have a value if there are fish catch data
-  observeEvent(list(input$bait_code, input$spec_code_row_1),{
-        if (input$bait_code %in% c("",NA,NULL) & !input$spec_code_row_1 %in% c("",NA,NULL)) {
-          showFeedbackDanger("bait_code", "If fish were caught in this trap, it must have bait code!")
-          checks$check24<- F
-        } else {
-          hideFeedback("bait_code")
-          checks$check24<- T
+## 24:1 Range and must have a value if there are fish catch data
+  observeEvent(list(input$bait_code,input$spec_code_row_1),{
+      if (input$bait_code %in% c("",NA,NULL) & !input$spec_code_row_1 %in% c(NULL,NA,"")) {
+        hideFeedback("bait_code")
+        showFeedbackDanger("bait_code", "To submit data for this trap, it must have a bait code!")
+        checks$check24<- F
+      }else{
+        hideFeedback("bait_code")
+        ## need to return species name if it's still needed
+        if(!input$bait_code %in% c("",NA,NULL)){
+          new.bait <- input$bait_code
+          b.spec <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait)]
+          showFeedback("bait_code",b.spec)
         }
-      }, ignoreInit = TRUE)
+        checks$check24<- T
+      }
+      }, ignoreInit = T)
 
 ## 25 bait code 2
 ## 25:1 should only be values in bait code 2 if bait code has values
@@ -1541,7 +1570,7 @@ observe({
       hideFeedback("bait_code2")
       showFeedbackDanger("bait_code2", "No BAIT CD Entered")
       checks$check25<- F
-    } else {
+    }else{
       hideFeedback("bait_code2")
       ## need to return species name if it's still needed
       if(!input$bait_code2 %in% c("",NA,NULL)){
@@ -1558,9 +1587,9 @@ observe({
   observe({
     if (input$bait_code2 %in% c("",NA,NULL) & !input$bait_code3 %in% c("",NA,NULL)) {
       hideFeedback("bait_code3")
-      showFeedbackDanger("bait_code3", "No BAIT CD2 Entered")
+      showFeedbackDanger("bait_code3", "No BAIT CD2 entered")
       checks$check26<- F
-    } else {
+    }else{
       hideFeedback("bait_code3")
       ## need to return species name if it's still needed
       if(!input$bait_code3 %in% c("",NA,NULL)){
@@ -1572,7 +1601,66 @@ observe({
     }
   })
 
+## 27 bait type 1
+## 27:1 range 1-4
+  observeEvent(input$bait_type1,{
+    if(!input$bait_type1 %in% c(NA,NULL,"") & (input$bait_type1 < 0 | input$bait_type1 > 4)){
+      hideFeedback("bait_type1")
+      showFeedbackDanger("bait_type1", "Valid bait type codes are 1-4")
+      checks$check27<- F
+    }else{
+      hideFeedback("bait_type1")
+      checks$check27<- T
+      if(!input$bait_type1 %in% c(NA,NULL,"")){ ## if error is cleared but there's still a value, need to replenish the lookup table name
+        b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type1)]
+        showFeedback("bait_type1",b.type)
+      }
+      }
+  })
 
+## 28 bait type 2
+## 28:1 range 1-4 and can only have value if BAIT CD2 has value
+  observe({
+    if(!input$bait_type2 %in% c(NA,NULL,"") & (input$bait_type2 < 0 | input$bait_type2 > 4)){
+      hideFeedback("bait_type2")
+      showFeedbackDanger("bait_type2", "Valid bait type codes are 1-4")
+      checks$check28<- F
+    }else{
+      hideFeedback("bait_type2")
+      checks$check28<- T
+      if(!input$bait_type2 %in% c(NA,NULL,"")){ ## if error is cleared but there's still a value, need to replenish the lookup table name
+        if(input$bait_type1 %in% c(NA,NULL,"")){
+          showFeedbackDanger("bait_type2", "No BAIT TYPE 1 entered")
+          checks$check28<- F
+        }else{
+          b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type2)]
+          showFeedback("bait_type2",b.type)
+        }
+      }
+    }
+  })
+
+## 29 bait type 3
+## 29:1 range 1-4
+  observe({
+    if(!input$bait_type3 %in% c(NA,NULL,"") & (input$bait_type3 < 0 | input$bait_type3 > 4)){
+      hideFeedback("bait_type3")
+      showFeedbackDanger("bait_type3", "Valid bait type codes are 1-4")
+      checks$check29<- F
+    }else{
+      hideFeedback("bait_type3")
+      checks$check29<- T
+      if(!input$bait_type3 %in% c(NA,NULL,"")){ ## if error is cleared but there's still a value, need to replenish the lookup table name
+        if(input$bait_type2 %in% c(NA,NULL,"")){
+          showFeedbackDanger("bait_type3", "No BAIT TYPE 2 entered")
+          checks$check29<- F
+        }else{
+          b.type <- code.tab$Name[which(code.tab$Field %in% "Bait Type" & code.tab$Code %in% input$bait_type3)]
+          showFeedback("bait_type3",b.type)
+        }
+      }
+    }
+  })
 
 #### FISH ROWS
   observe({      ## general observer for row numbers
