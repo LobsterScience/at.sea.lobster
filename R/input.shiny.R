@@ -356,12 +356,12 @@ div(class = "compact-row",
     div(class= "compact-input", numericInput("num_traps", "#TRAPS IN SET",value = NA, min = 0)),
     div(class = "mediumwide-input", numericInput("lat", "LATITUDE (DDMM.MM)", value = NULL, max = 9059.99, min = -9059.99, step = 0.01)),
     div(class = "mediumwide-input", numericInput("lon", "LONGITUDE (DDMM.MM)", value = NULL, max = 18059.99, min = -18059.99, step = 0.01)),
-    div(class= "compact-input", numericInput("grid_num", "GRID NO", value = NULL)),
-    div(class= "compact-input", numericInput("depth", "DEPTH (FM)", value = NULL, min = 0)),
-    div(class= "compact-input", numericInput("soak_days", "SOAK DAYS", value = NULL, min = 0)),
+    div(class= "compact-input", numericInput("grid_num", "GRID NO", value = NA)),
+    div(class= "compact-input", numericInput("depth", "DEPTH (FM)", value = NA, min = 0, max = 300)),
+    div(class= "compact-input", numericInput("soak_days", "SOAK DAYS", value = NA, min = 0, max = 30)),
     div(class= "compact-input", numericInput("trap_type", "TRAP TYPE", value = NA, min = 1, max = 4)),
     div(class= "compact-input", numericInput("vent_size", "VENT SIZE (CODE)", value = NA, min = 1, max = 5)),
-    div(class= "compact-input", numericInput("num_vents", "# OF VENTS", value = NULL, min = 0))
+    div(class= "compact-input", numericInput("num_vents", "# OF VENTS", value = NA, min = 0))
   ),
 
  fluidRow(),
@@ -1365,6 +1365,9 @@ suppressWarnings({
       }
   }, ignoreInit = T)
 
+
+########## SET ROW
+
 ## 13 Set/Trawl/String
 ## 13:1 Range >=0
   observe({
@@ -1391,7 +1394,33 @@ suppressWarnings({
   ')
   })
 
-  #### SET ROW
+## 15 Latitude
+## 16 Longitude
+## 17 Grid No
+
+## 18 Depth (FM)
+## 18:1 range and warning if > 200 m
+observeEvent(input$depth,{
+  if(!input$depth %in% c(NA,NULL,"") & (input$depth < 0 | input$depth > 300)){
+    hideFeedback("depth")
+    showFeedbackDanger("depth", "Depth must be between 0 and 300 m")
+    proceed.any(F)
+  }else{
+    if(!input$depth %in% c(NA,NULL,"") & input$depth>200){
+      showFeedbackWarning("depth","Warning: are you sure it was that deep?")
+      proceed.any(T)
+    }else{
+      hideFeedback("depth")
+      proceed.any(T)
+    }
+
+  }
+}, ignoreInit = T)
+
+## 19 Soak Days
+## 20 Trap Type
+## 21 Vent Code
+## 22 # of Vents
 
 
   #### TRAP ROW
