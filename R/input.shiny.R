@@ -649,9 +649,52 @@ suppressWarnings({
   ## set reactive placeholder for trip.ID
   trip.id <- reactiveVal(NULL)
 
-  ## set reactive button checks to allow user to click or not
-  proceed.trap <- reactiveVal(TRUE)
-  proceed.any <- reactiveVal(TRUE)
+  ## set reactive success/failure check variables for every field to allow user to click NEXT or not
+  checks <- reactiveValues(check1 = T,
+                           check2 = T,
+                           check3 = T,
+                           check4 = T,
+                           check5 = T,
+                           check6 = T,
+                           check7 = T,
+                           check8 = T,
+                           check9 = T,
+                           check10 = T,
+                           check11 = T,
+                           check12 = T,
+                           check13 = T,
+                           check14 = T,
+                           check15 = T,
+                           check16 = T,
+                           check17 = T,
+                           check18 = T,
+                           check19 = T,
+                           check20 = T,
+                           check21 = T,
+                           check22 = T,
+                           check23 = T,
+                           check24 = T,
+                           check25 = T,
+                           check26 = T,
+                           check27 = T,
+                           check28 = T,
+                           check29 = T,
+                           check30 = T,
+                           check31 = T,
+                           check32 = T,
+                           check33 = T,
+                           check34 = T,
+                           check35 = T,
+                           check36 = T,
+                           check37 = T,
+                           check38 = T,
+                           check39 = T,
+                           check40 = T,
+                           check41 = T,
+                           check42 = T,
+                           check43 = T)
+
+
 
   #### for reactively adding fish Info rows when species code is entered
   # Reactive value to track row IDs
@@ -1221,10 +1264,10 @@ suppressWarnings({
   observeEvent(input$board_date,{
     if(input$board_date > Sys.Date()){
       showFeedbackDanger("board_date", "Dates can't be in the future!")
-      proceed.any(F)
+      checks$check1 <- F
     }else {
       hideFeedback("board_date")
-      proceed.any(T)
+      checks$check1 <- T
     }
   },ignoreInit = T)
 
@@ -1233,16 +1276,16 @@ suppressWarnings({
   observeEvent(input$land_date,{
     if(input$land_date > Sys.Date()){
       showFeedbackDanger("land_date", "Dates can't be in the future!")
-      proceed.any(F)
+      checks$check2 <- F
     }else {
       hideFeedback("land_date")
-      proceed.any(T)
+      checks$check2 <- T
     }
   },ignoreInit = T)
 
 
 ## 3 Vessel Reg #
-##3:1 range  0 - 999999 (make violation impossible)
+##3:1 range  0 - 999999 (violation impossible)
   observe({
     runjs('
     $("#vessel_num").on("input", function() {
@@ -1259,7 +1302,7 @@ suppressWarnings({
   })
 
 ## 4 Vessel Name
-## 4:1 range < 40 characters (make violation impossible)
+## 4:1 range < 40 characters (violation impossible)
   observe({
     runjs('
       $("#vessel_name").on("input", function() {
@@ -1272,7 +1315,7 @@ suppressWarnings({
   })
 
 ## 5 License #
-## 5:1 range  0 - 999999999 (make violation impossible)
+## 5:1 range  0 - 999999999 (violation impossible)
   observe({
     runjs('
     $("#license_num").on("input", function() {
@@ -1289,7 +1332,7 @@ suppressWarnings({
   })
 
 ## 6 Captain Name
-## 6:1 range < 40 characters (make violation impossible)
+## 6:1 range < 40 characters (violation impossible)
   observe({
     runjs('
       $("#captain_name").on("input", function() {
@@ -1302,7 +1345,7 @@ suppressWarnings({
   })
 
 ## 7 Sampler Name
-## 7:1 range < 40 characters (make violation impossible)
+## 7:1 range < 40 characters (violation impossible)
   observe({
     runjs('
       $("#sampler_name").on("input", function() {
@@ -1325,7 +1368,7 @@ suppressWarnings({
   }, ignoreInit = T)
 
 ## 9 Data Entry Group
-## 9:1  range < 40 characters (make violation impossible)
+## 9:1  range < 40 characters (violation impossible)
   observe({
     runjs('
       $("#entry_group").on("input", function() {
@@ -1338,7 +1381,7 @@ suppressWarnings({
   })
 
 ## 10 Data Entry Name
-## 10:1  range < 40 characters (make violation impossible)
+## 10:1  range < 40 characters (violation impossible)
   observe({
     runjs('
       $("#entry_name").on("input", function() {
@@ -1358,10 +1401,10 @@ suppressWarnings({
   observeEvent(input$trip_code, {
       if(input$trip_code %in% c(NA,NULL,"")){
         showFeedbackDanger("trip_code", "Error: No Trip Code!")
-        proceed.any(F)
+        checks$check12 <- F
       }else{
         hideFeedback("trip_code")
-        proceed.any(T)
+        checks$check12 <- T
       }
   }, ignoreInit = T)
 
@@ -1369,7 +1412,7 @@ suppressWarnings({
 ########## SET ROW
 
 ## 13 Set/Trawl/String
-## 13:1 Range >=0
+## 13:1 Range >=0 (violation impossible)
   observe({
     runjs('
     $("#set_num").on("input", function() {
@@ -1382,7 +1425,7 @@ suppressWarnings({
   })
 
 ## 14 #Traps in Set
-## 14:1 Range >=0
+## 14:1 Range >=0 (violation impossible)
   observe({
     runjs('
     $("#num_traps").on("input", function() {
@@ -1404,46 +1447,100 @@ observeEvent(input$depth,{
   if(!input$depth %in% c(NA,NULL,"") & (input$depth < 0 | input$depth > 300)){
     hideFeedback("depth")
     showFeedbackDanger("depth", "Depth must be between 0 and 300 m")
-    proceed.any(F)
+    checks$check18<- F
   }else{
     if(!input$depth %in% c(NA,NULL,"") & input$depth>200){
       showFeedbackWarning("depth","Warning: are you sure it was that deep?")
-      proceed.any(T)
+      checks$check18<- T
     }else{
       hideFeedback("depth")
-      proceed.any(T)
+      checks$check18<- T
     }
 
   }
 }, ignoreInit = T)
 
 ## 19 Soak Days
+## 19:1 range and warning if > 15 days
+observeEvent(input$soak_days,{
+  if(!input$soak_days %in% c(NA,NULL,"") & (input$soak_days < 0 | input$soak_days > 30)){
+    hideFeedback("soak_days")
+    showFeedbackDanger("soak_days", "Must be between 0 and 30 days")
+    checks$check19<- F
+  }else{
+    if(!input$soak_days %in% c(NA,NULL,"") & input$soak_days>15){
+      showFeedbackWarning("soak_days","Warning: was soak time really that long?")
+      checks$check19<- T
+    }else{
+      hideFeedback("soak_days")
+      checks$check19<- T
+    }
+
+  }
+}, ignoreInit = T)
+
 ## 20 Trap Type
+## 20: 1 range 1-4
+observeEvent(input$trap_type,{
+  if(!input$trap_type %in% c(NA,NULL,"") & (input$trap_type < 0 | input$trap_type > 4)){
+    hideFeedback("trap_type")
+    showFeedbackDanger("trap_type", "Valid trap type codes are 1-4")
+    checks$check20<- F
+  }else{
+    hideFeedback("trap_type")
+    checks$check20<- T
+  }
+  })
+
 ## 21 Vent Code
+## 21: 1 range 1-5
+observeEvent(input$vent_size,{
+  if(!input$vent_size %in% c(NA,NULL,"") & (input$vent_size < 0 | input$vent_size > 5)){
+    hideFeedback("vent_size")
+    showFeedbackDanger("vent_size", "Valid vent codes are 1-5")
+    checks$check21<- F
+  }else{
+    hideFeedback("vent_size")
+    checks$check21<- T
+  }
+})
+
 ## 22 # of Vents
+## 22:1 range >=0 (Violation Impossible)
+observe({
+  runjs('
+    $("#num_vents").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+})
+
 
 
   #### TRAP ROW
 
-##   bait code
-## :1  must have a value if there are fish catch data
+## 24  bait code
+## 24:1  must have a value if there are fish catch data
   observeEvent(list(input$bait_code, input$spec_code_row_1),{
         if (input$bait_code %in% c("",NA,NULL) & !input$spec_code_row_1 %in% c("",NA,NULL)) {
           showFeedbackDanger("bait_code", "If fish were caught in this trap, it must have bait code!")
-          proceed.any(F)
+          checks$check24<- F
         } else {
           hideFeedback("bait_code")
-          proceed.any(T)
+          checks$check24<- T
         }
       }, ignoreInit = TRUE)
 
-##  bait code 2
-##:1 should only be values in bait code 2 if bait code has values
+## 25 bait code 2
+## 25:1 should only be values in bait code 2 if bait code has values
   observe({
     if (input$bait_code %in% c("",NA,NULL) & !input$bait_code2 %in% c("",NA,NULL)) {
       hideFeedback("bait_code2")
       showFeedbackDanger("bait_code2", "No BAIT CD Entered")
-      proceed.any(F)
+      checks$check25<- F
     } else {
       hideFeedback("bait_code2")
       ## need to return species name if it's still needed
@@ -1452,17 +1549,17 @@ observeEvent(input$depth,{
         b.spec2 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait2)]
         showFeedback("bait_code2",b.spec2)
       }
-      proceed.any(T)
+      checks$check25<- T
     }
   })
 
-##  bait code 3
-##:1 should only be values in bait code 3 if bait code2 has values
+## 26 bait code 3
+## 26:1 should only be values in bait code 3 if bait code2 has values
   observe({
     if (input$bait_code2 %in% c("",NA,NULL) & !input$bait_code3 %in% c("",NA,NULL)) {
       hideFeedback("bait_code3")
       showFeedbackDanger("bait_code3", "No BAIT CD2 Entered")
-      proceed.any(F)
+      checks$check26<- F
     } else {
       hideFeedback("bait_code3")
       ## need to return species name if it's still needed
@@ -1471,7 +1568,7 @@ observeEvent(input$depth,{
         b.spec3 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait3)]
         showFeedback("bait_code3",b.spec3)
       }
-      proceed.any(T)
+      checks$check26<- T
     }
   })
 
@@ -1482,19 +1579,19 @@ observeEvent(input$depth,{
     current_rows <- row_ids()
 
 
-##  Species Code
-## :1 rows must be filled sequentially
+## 31 Species Code
+## 31:1 rows must be filled sequentially
 
 
-##   Shell hard
+## 35 Shell hard
     range1 <- c(NA,1,2,3,4,5,6,7)
-##:1  Range + should only contain values if species code is lobster (2550)
+## 35:1  Range + should only contain values if species code is lobster (2550)
     # Create an observer for each spec_code and shell_hard field
     lapply(current_rows, function(row_id) {
       observeEvent(list(input[[paste0("shell_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
         if(!input[[paste0("shell_", row_id)]] %in% range1){
           showFeedbackDanger(paste0("shell_", row_id), paste0("Shell Hardness range is ",paste0(range1, collapse = ",")))
-          proceed.any(F)
+          proceed.any<- F
         }else{
           if(!is.na(input[[paste0("spec_code_", row_id)]])){
             # Get the updated value
@@ -1502,14 +1599,14 @@ observeEvent(input$depth,{
             new_shell <- input[[paste0("shell_", row_id)]]
             if(!new_spec %in% 2550 & !is.na(new_shell)){
               showFeedbackDanger(paste0("shell_", row_id), "Shell Hardness allowed for lobster (2550) only")
-              proceed.any(F)
+              proceed.any<- F
             }else{
               hideFeedback(paste0("shell_", row_id))
-              proceed.any(T)
+              proceed.any<- T
             }
           }else{
             hideFeedback(paste0("shell_", row_id))
-            proceed.any(T)
+            proceed.any<- T
           }
         }
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
@@ -1521,11 +1618,11 @@ observeEvent(input$depth,{
 
 
 
-
-
 ### BUTTON CLICKABILITY
   observe({
-    if (!proceed.any()) {
+    any_false <- any(unlist(reactiveValuesToList(checks)) %in% FALSE)
+
+    if (any_false) {
       disable("next_trap")
       disable("next_set")
       disable("submit_trip")
@@ -1535,16 +1632,6 @@ observeEvent(input$depth,{
       enable("submit_trip")
     }
   })
-
-
-  observe({
-    if (!proceed.trap()) {
-      disable("next_trap")
-    } else {
-      enable("next_trap")
-    }
-  })
-
 
 
 } ## Server code
