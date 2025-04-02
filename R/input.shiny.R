@@ -1531,7 +1531,7 @@ observe({
 
 
 ## 23 Trap No
-## 23:1 range >=0 (Violation impossible)
+## 23:1 range >=0 (Violation impossible) and must have value if downstream fields have values (can rely on bait cd and spec code)
 observe({
   runjs('
     $("#trap_num").on("input", function() {
@@ -1542,6 +1542,16 @@ observe({
     });
   ')
 })
+observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
+  if(is.na(input$trap_num) & (!is.na(input$bait_code) | !is.na(input$spec_code_row_1))){
+    showFeedbackDanger("trap_num", "Error: No Trap Number Selected")
+    checks$check23 <- F
+  }else{
+    hideFeedback("trap_num")
+    checks$check23 <- T
+  }
+}, ignoreInit = T)
+
 
 
 ## 24  bait code
@@ -1666,20 +1676,33 @@ observe({
   observe({      ## general observer for row numbers
     current_rows <- row_ids()
 
-
-## 31 Species Code
-## 31:1 rows must be filled sequentially
-
-
-## 35 Shell hard
-    range1 <- c(NA,1,2,3,4,5,6,7)
-## 35:1  Range + should only contain values if species code is lobster (2550)
-    # Create an observer for each spec_code and shell_hard field
     lapply(current_rows, function(row_id) {
+
+      ## 30 Trap No
+      ## 30:1 Must match Trap No in Trap row
+      observeEvent(input[[paste0("trap_num_", row_id)]],{
+       if((!is.na(input$trap_num) & !input[[paste0("trap_num_", row_id)]] == input$trap_num) |
+          (is.na(input$trap_num) & !is.na(input[[paste0("trap_num_", row_id)]]))){
+         showFeedbackDanger(paste0("trap_num_", row_id),"Error: Trap Numbers must match Trap Info")
+         checks$check30 <- F
+       }else{
+         hideFeedback(paste0("trap_num_", row_id))
+         checks$check30 <- T
+       }
+      }, ignoreInit = T)
+
+
+      ## 31 Species Code
+      ## 31:1 rows must be filled sequentially
+
+      ## 35 Shell hard
+      ## 35:1  Range + should only contain values if species code is lobster (2550)
+      # Create an observer for each spec_code and shell_hard field
       observeEvent(list(input[[paste0("shell_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
-        if(!input[[paste0("shell_", row_id)]] %in% range1){
-          showFeedbackDanger(paste0("shell_", row_id), paste0("Shell Hardness range is ",paste0(range1, collapse = ",")))
-          proceed.any<- F
+        range35 <- c(NA,1,2,3,4,5,6,7)
+        if(!input[[paste0("shell_", row_id)]] %in% range35){
+          showFeedbackDanger(paste0("shell_", row_id), paste0("Shell Hardness range is ",paste0(range35, collapse = ",")))
+          checks$check35<- F
         }else{
           if(!is.na(input[[paste0("spec_code_", row_id)]])){
             # Get the updated value
@@ -1687,18 +1710,20 @@ observe({
             new_shell <- input[[paste0("shell_", row_id)]]
             if(!new_spec %in% 2550 & !is.na(new_shell)){
               showFeedbackDanger(paste0("shell_", row_id), "Shell Hardness allowed for lobster (2550) only")
-              proceed.any<- F
+              checks$check35<- F
             }else{
               hideFeedback(paste0("shell_", row_id))
-              proceed.any<- T
+              checks$check35<- T
             }
           }else{
             hideFeedback(paste0("shell_", row_id))
-            proceed.any<- T
+            checks$check35<- T
           }
         }
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
-    })
+
+
+    }) ## lapply
 
 
   }) ## observer for all fish row data
