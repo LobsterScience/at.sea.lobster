@@ -1719,9 +1719,8 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
 
 
       ## 31 Species Code
-      ## 31:1 rows must be filled sequentially
+      ## 31:1 range (lookup table) and rows must be filled sequentially
       observe({
-        #list(input[[paste0("spec_code_", row_id)]]),
         row.num <- as.numeric(gsub("\\D", "", row_id))
         num.rows <- max(as.numeric(gsub("\\D", "", current_rows)))
         if((row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
@@ -1734,6 +1733,12 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           checks$check31 <- F
         }else{
           hideFeedback(paste0("spec_code_", row_id))
+          print(spec.tab$COMMON[5])
+          ## check that chosen code exists in species code table
+          if(!is.null(input[[paste0("spec_code_", row_id)]]) && !is.na(input[[paste0("spec_code_", row_id)]]) &&
+             !input[[paste0("spec_code_", row_id)]] %in% spec.tab$SPECIES_CODE){
+            showFeedbackWarning(paste0("spec_code_", row_id),"Warning! This code is not on the list of known species!")
+          }
           checks$check31 <- T
         }
       })
