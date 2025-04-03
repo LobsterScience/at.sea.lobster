@@ -325,35 +325,6 @@ tags$head(
     "))
 ),
 
-# tags$head(
-#   tags$style(HTML("
-#       .shiny-notification {
-#         position: absolute !important;
-#         z-index: 1050;
-#         width: 300px;
-#         height: 100px;
-#         font-size: 18px;
-#         padding: 20px;
-#         text-align: center;
-#       }
-#     ")),
-#   # JavaScript to center the notification at the user's current viewport
-#   tags$script(HTML("
-#       function centerNotification() {
-#         var notif = document.getElementsByClassName('shiny-notification')[0];
-#         if (notif) {
-#           var viewportHeight = window.innerHeight;
-#           var viewportWidth = window.innerWidth;
-#           notif.style.top = (window.scrollY + viewportHeight / 2 - notif.offsetHeight / 2) + 'px';
-#           notif.style.left = (window.scrollX + viewportWidth / 2 - notif.offsetWidth / 2) + 'px';
-#         }
-#       }
-#     "))
-# ),
-#actionButton("notify", "Show Notification"),
-
-
-
 ###################################### TRIP INFO
 
 
@@ -1053,7 +1024,7 @@ suppressWarnings({
   ##  Autofill Update each row's trap.num field with the current input$trap_num value
   observeEvent(list(input$trap_num, row_ids()), {
     req(input$trap_num) # Ensure trap.num has a value
-    delay(10, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
+    delay(1, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
       current_rows <- row_ids()
       lapply(current_rows, function(row_id) {
         updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)
