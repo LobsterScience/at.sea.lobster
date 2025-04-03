@@ -1543,7 +1543,7 @@ observe({
   ')
 })
 observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
-  if(is.na(input$trap_num) & (!is.na(input$bait_code) | !is.na(input$spec_code_row_1))){
+  if(is.na(input$trap_num) & (!input$bait_code %in% c(NULL,NA,"") | !input$spec_code_row_1 %in% c(NULL,NA,""))){
     showFeedbackDanger("trap_num", "Error: No Trap Number Selected")
     checks$check23 <- F
   }else{
@@ -1681,8 +1681,8 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       ## 30 Trap No
       ## 30:1 Must match Trap No in Trap row
       observeEvent(input[[paste0("trap_num_", row_id)]],{
-       if((!is.na(input$trap_num) & !input[[paste0("trap_num_", row_id)]] == input$trap_num) |
-          (is.na(input$trap_num) & !is.na(input[[paste0("trap_num_", row_id)]]))){
+       if((!input$trap_num %in% c(NULL,NA,"") & !input[[paste0("trap_num_", row_id)]] %in% input$trap_num) |
+          (input$trap_num %in% c(NULL,NA,"") & !input[[paste0("trap_num_", row_id)]] %in% c(NULL,NA,""))){
          showFeedbackDanger(paste0("trap_num_", row_id),"Error: Trap Numbers must match Trap Info")
          checks$check30 <- F
        }else{
@@ -1694,6 +1694,23 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
 
       ## 31 Species Code
       ## 31:1 rows must be filled sequentially
+      observe({
+        #list(input[[paste0("spec_code_", row_id)]]),
+        row.num <- as.numeric(gsub("\\D", "", row_id))
+        num.rows <- max(as.numeric(gsub("\\D", "", current_rows)))
+        if((row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
+            input[[paste0("spec_code_row_",row.num-1)]] %in% c(NULL,NA,"")) |
+           (row.num<num.rows &&
+            input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
+           !input[[paste0("spec_code_row_",row.num+1)]] %in% c(NULL,NA,""))
+           ){
+          showFeedbackDanger(paste0("spec_code_", row_id),"Rows must be filled sequentially!")
+          checks$check31 <- F
+        }else{
+          hideFeedback(paste0("spec_code_", row_id))
+          checks$check31 <- T
+        }
+      })
 
       ## 35 Shell hard
       ## 35:1  Range + should only contain values if species code is lobster (2550)
