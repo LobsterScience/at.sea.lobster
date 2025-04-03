@@ -160,6 +160,8 @@ if (result[[1]] == 0) {
 suppressWarnings({
 ui <- fluidPage(
 
+######### GENERAL FORMATTING
+
   useShinyjs(), ##necessary for delay functions to work
   useShinyFeedback(),  ## necessary for inline error check warnings to work
 
@@ -305,6 +307,54 @@ tags$script(HTML("
     });
 ")),
 
+## formatting for error/warning notifications (pop-up flags)
+tags$head(
+  tags$style(HTML("
+      .shiny-notification {
+        position: fixed;
+        top: 80vh;
+        left: 50vw;
+        transform: translate(-50%, -50%);
+        z-index: 1050;
+        width: 300px; /* Increase width */
+        height: 100px; /* Increase height */
+        font-size: 18px; /* Make text bigger */
+        padding: 20px; /* Add more padding */
+        text-align: center; /* Center text */
+      }
+    "))
+),
+
+# tags$head(
+#   tags$style(HTML("
+#       .shiny-notification {
+#         position: absolute !important;
+#         z-index: 1050;
+#         width: 300px;
+#         height: 100px;
+#         font-size: 18px;
+#         padding: 20px;
+#         text-align: center;
+#       }
+#     ")),
+#   # JavaScript to center the notification at the user's current viewport
+#   tags$script(HTML("
+#       function centerNotification() {
+#         var notif = document.getElementsByClassName('shiny-notification')[0];
+#         if (notif) {
+#           var viewportHeight = window.innerHeight;
+#           var viewportWidth = window.innerWidth;
+#           notif.style.top = (window.scrollY + viewportHeight / 2 - notif.offsetHeight / 2) + 'px';
+#           notif.style.left = (window.scrollX + viewportWidth / 2 - notif.offsetWidth / 2) + 'px';
+#         }
+#       }
+#     "))
+# ),
+#actionButton("notify", "Show Notification"),
+
+
+
+###################################### TRIP INFO
 
 
 fluidRow(
@@ -1119,12 +1169,14 @@ suppressWarnings({
         continue = T
         if(is.null(trip.id)){
           warning("No TRIP ID Found!")
+          showNotification("No TRIP ID FOUND!", type = "error")
           continue = F
         }
         if(continue){
           if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){set.id <- paste0(trip.id(),"_",input$set_num)
           }else{
             warning("No Set ID Found!")
+            showNotification("No SET ID FOUND!", type = "error")
             continue = F
           }
         }
@@ -1132,6 +1184,7 @@ suppressWarnings({
           if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
           }else{
             warning("No Trap ID Found!")
+            showNotification("No TRAP ID FOUND!", type = "error")
             continue = F
           }
         }
@@ -1185,12 +1238,14 @@ suppressWarnings({
     continue = T
     if(is.null(trip.id)){
       warning("No TRIP ID Found!")
+      showNotification("No TRIP ID FOUND!", type = "error")
       continue = F
     }
     if(continue){
       if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){set.id <- paste0(trip.id(),"_",input$set_num)
       }else{
         warning("No Set ID Found!")
+        showNotification("No SET ID FOUND!", type = "error")
         continue = F
       }
     }
