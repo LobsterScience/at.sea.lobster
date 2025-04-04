@@ -435,6 +435,7 @@ suppressWarnings({
 
   ## bring in species and other code lists so they only have to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
+  crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
   code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
 ####################################################################################################################################
   ### DEFINE DATABASE UPDATING FUNCTIONS (FOR WHEN 'NEXT' BUTTONS ARE CLICKED)
@@ -779,6 +780,7 @@ suppressWarnings({
     insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row("row_1"))
   })
 
+
   #### AUTOFILLS ###############################
 
   ## create Trip code when enough info is entered
@@ -1032,34 +1034,7 @@ suppressWarnings({
     })
   })
 
-  # Observe when catch species code is added to last row and add a new row
-    observeEvent(input[[paste0("spec_code_", tail(row_ids(), 1))]], {
-      last_id <- tail(row_ids(), 1)
-      if (!is.null(input[[paste0("spec_code_", last_id)]]) &
-          !is.na(input[[paste0("spec_code_", last_id)]])) {
-        new_id <- paste0("row_", length(row_ids()) + 1)
-        row_ids(c(row_ids(), new_id))
-        insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row(new_id))
-      }
-  })
-
-  ## also continually observe catch spec code input to auto-fill common name
-  observe({
-    current_rows <- row_ids()
-    # Create an observer for each spec.code field
-    lapply(current_rows, function(row_id) {
-      observeEvent(input[[paste0("spec_code_", row_id)]], {
-        # Get the updated value
-        new_value <- input[[paste0("spec_code_", row_id)]]
-        ### reference species list to auto fill common name
-        common <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new_value)]
-        updateTextInput(session, paste0("common_", row_id), value = common)
-
-      }, ignoreInit = TRUE)  # Avoid triggering on initialization
-    })
-  })
-
-  # ## Also autofill species names for bait codes (subscript)
+  # ## Autofill species names for bait codes (subscript)
   observeEvent(input$bait_code, {
       if(!input$bait_code %in% c(NA,NULL,"")){
         hideFeedback("bait_code")
@@ -1127,6 +1102,56 @@ suppressWarnings({
   #     showFeedback("bait_type3",b.type)
   #   }else{hideFeedback("bait_type3")}
   # }, ignoreInit = T)
+
+
+  # Observe when catch species code is added to last row and add a new row
+  observeEvent(input[[paste0("spec_code_", tail(row_ids(), 1))]], {
+    last_id <- tail(row_ids(), 1)
+    if (!is.null(input[[paste0("spec_code_", last_id)]]) &
+        !is.na(input[[paste0("spec_code_", last_id)]])) {
+      new_id <- paste0("row_", length(row_ids()) + 1)
+      row_ids(c(row_ids(), new_id))
+      insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row(new_id))
+    }
+  })
+
+  ## also continually observe catch spec code input to auto-fill common name
+  observe({
+    current_rows <- row_ids()
+    # Create an observer for each spec.code field
+    lapply(current_rows, function(row_id) {
+      observeEvent(input[[paste0("spec_code_", row_id)]], {
+        # Get the updated value
+        new_value <- input[[paste0("spec_code_", row_id)]]
+        ### reference species list to auto fill common name
+        common <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new_value)]
+        updateTextInput(session, paste0("common_", row_id), value = common)
+
+      }, ignoreInit = TRUE)  # Avoid triggering on initialization
+      ### AND
+      ## control contextual restrictions to fish row field usage (which fields can be used for what species/sex selections)
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]]),{
+        if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) |
+           (input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3))){
+          shinyjs::disable(paste0("egg_", row_id))
+          shinyjs::disable(paste0("vnotch_", row_id))
+          shinyjs::disable(paste0("clutch_", row_id))
+        }else{
+          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 2){
+            shinyjs::enable(paste0("vnotch_", row_id))
+            shinyjs::disable(paste0("egg_", row_id))
+            shinyjs::disable(paste0("clutch_", row_id))
+          }else{
+            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 3){
+              shinyjs::enable(paste0("vnotch_", row_id))
+              shinyjs::enable(paste0("egg_", row_id))
+              shinyjs::enable(paste0("clutch_", row_id))
+            }
+          }
+        }
+      }, ignoreInit = T)
+    })
+  })
 ####################################################################################################################################################
 ##BEGINNING OF INTERACTIVE SERVER CODE (BUTTON CLICKS)
   ## SUBMIT LEVEL 1
@@ -1733,7 +1758,6 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           checks$check31 <- F
         }else{
           hideFeedback(paste0("spec_code_", row_id))
-          print(spec.tab$COMMON[5])
           ## check that chosen code exists in species code table
           if(!is.null(input[[paste0("spec_code_", row_id)]]) && !is.na(input[[paste0("spec_code_", row_id)]]) &&
              !input[[paste0("spec_code_", row_id)]] %in% spec.tab$SPECIES_CODE){
@@ -1742,6 +1766,29 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           checks$check31 <- T
         }
       })
+
+      ## 32 COMMON
+      ## 32:1 No restrictions
+
+      ## 33 Length
+      ## 33:1
+
+      ## 34 Sex
+      ## 34:1 Range 1-3 and should only be for crustaceans
+      observeEvent(list(input[[paste0("sex_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
+        if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA,1:3)){
+          hideFeedback(paste0("sex_", row_id))
+          showFeedbackDanger(paste0("sex_", row_id), "Allowed sex values are 1,2,3")
+          checks$check34 <- F
+        }else{
+          hideFeedback(paste0("sex_", row_id))
+          checks$check34 <- T
+          if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA) & !input[[paste0("spec_code_", row_id)]] %in% crustaceans$SPECIES_CODE){
+            showFeedbackWarning(paste0("sex_", row_id), "Sex codes are for crustaceans only")
+          }
+        }
+      }, ignoreInit = T)
+      ## 34:2 If lobster sex = 1 then can't use egg or vnotch fields (Violation impossible - see Autofills)
 
       ## 35 Shell hard
       ## 35:1  Range + should only contain values if species code is lobster (2550)
