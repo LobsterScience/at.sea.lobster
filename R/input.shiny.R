@@ -1791,7 +1791,16 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       ## 32:1 No restrictions
 
       ## 33 Length
-      ## 33:1
+      ## 33:1 ## length should have a value if there is a species choice
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("length_", row_id)]]),{
+        hideFeedback(paste0("length_", row_id))
+        if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("length_", row_id)]] %in% c(NA,NULL)){
+          showFeedbackWarning(paste0("length_", row_id), "No Value!")
+          checks$check33 <- F
+        }else{
+          checks$check33 <- T
+        }
+      }, ignoreInit = T)
 
       ## 34 Sex
       ## 34:1 Range 1-3 and should only be for crustaceans
@@ -1806,9 +1815,14 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA) & !input[[paste0("spec_code_", row_id)]] %in% crustaceans$SPECIES_CODE){
             showFeedbackWarning(paste0("sex_", row_id), "Sex codes are for crustaceans only")
           }
+          ## 34:2 should have a value if species is lobster
+          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% c(NULL,NA)){
+            showFeedbackWarning(paste0("sex_", row_id), "No Value!")
+          }
         }
       }, ignoreInit = T)
       ## 34:2 If lobster sex = 1 then can't use egg or vnotch fields (Violation impossible - see Autofills)
+      ## 34:3
 
       ## 35 Shell hard
       ## 35:1  Range + should only contain values if species code is lobster (2550) (Violation impossible, see autofills - below is redundant:)
@@ -1823,12 +1837,16 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
             # Get the updated value
             new_spec <- input[[paste0("spec_code_", row_id)]]
             new_shell <- input[[paste0("shell_", row_id)]]
-            if(!new_spec %in% 2550 & !is.na(new_shell)){
+            if(!new_spec %in% c(2550,2552) & !is.na(new_shell)){
               showFeedbackDanger(paste0("shell_", row_id), "Shell Hardness allowed for lobster (2550) only")
               checks$check35<- F
             }else{
               hideFeedback(paste0("shell_", row_id))
               checks$check35<- T
+              ## 35:2 Should have a value if species is lobster
+              if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("shell_", row_id)]] %in% c(NULL,NA)){
+                showFeedbackWarning(paste0("shell_", row_id), "No Value!")
+              }
             }
           }else{
             hideFeedback(paste0("shell_", row_id))
@@ -1858,6 +1876,19 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
               showFeedback(paste0("cond_", row_id),c)
             }
           }
+          ## 36: 2 should have a value if species is chosen
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
+            showFeedbackWarning(paste0("cond_", row_id), "No value!")
+          }
+        }
+      }, ignoreInit = T)
+
+      ## 37 Shell Disease
+      ## 37:1 should have a value if species is lobster
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("disease_", row_id)]]),{
+        hideFeedback(paste0("disease_", row_id))
+        if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("disease_", row_id)]] %in% c(NULL,NA)){
+          showFeedbackWarning(paste0("disease_", row_id), "No value!")
         }
       }, ignoreInit = T)
 
