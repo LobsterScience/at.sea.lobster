@@ -437,6 +437,7 @@ suppressWarnings({
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
   crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
   code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
+  condition <- readRDS(paste0(system.file("data", package = "Bycatch"), "/condition.rds"))
 ####################################################################################################################################
   ### DEFINE DATABASE UPDATING FUNCTIONS (FOR WHEN 'NEXT' BUTTONS ARE CLICKED)
   ##FISH
@@ -1122,9 +1123,9 @@ suppressWarnings({
     lapply(current_rows, function(row_id) {
       observeEvent(input[[paste0("spec_code_", row_id)]], {
         # Get the updated value
-        new_value <- input[[paste0("spec_code_", row_id)]]
+        new_spec <- input[[paste0("spec_code_", row_id)]]
         ### reference species list to auto fill common name
-        common <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new_value)]
+        common <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new_spec)]
         updateTextInput(session, paste0("common_", row_id), value = common)
 
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
@@ -1167,6 +1168,8 @@ suppressWarnings({
         }
        }
       }, ignoreInit = T)
+
+
     })
   })
 ####################################################################################################################################################
@@ -1833,6 +1836,30 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           }
         }
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
+
+      ## 36  Condition
+      ## 36 : 1 range 0:7 and warning if using fish codes for lobster or vice versa (includes description autofilling)
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("cond_", row_id)]]),{
+        hideFeedback(paste0("cond_", row_id))
+        if(!input[[paste0("cond_", row_id)]] %in% c(NULL,NA) & (input[[paste0("cond_", row_id)]]<0 | input[[paste0("cond_", row_id)]]>7)){
+          showFeedbackDanger(paste0("cond_", row_id), "Not a valid condition code")
+          checks$check36 <- F
+        }else{
+          checks$check36 <- T
+          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
+            c <- condition$lob_cond[which(condition$code %in% input[[paste0("cond_", row_id)]])]
+            if(c %in% NA){showFeedbackWarning(paste0("cond_", row_id), "This is not a lobster code")}else{
+              showFeedback(paste0("cond_", row_id),c)
+            }
+          }
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
+            c <- condition$fish_cond[which(condition$code %in% input[[paste0("cond_", row_id)]])]
+            if(c %in% NA){showFeedbackWarning(paste0("cond_", row_id), "This is a lobster code")}else{
+              showFeedback(paste0("cond_", row_id),c)
+            }
+          }
+        }
+      }, ignoreInit = T)
 
 
     }) ## lapply
