@@ -1129,26 +1129,43 @@ suppressWarnings({
 
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
       ### AND
-      ## control contextual restrictions to fish row field usage (which fields can be used for what species/sex selections)
+      ## control contextual restrictions to fish row field usage (which fields can be used for what species/sex selections etc.)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]]),{
-        if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) |
-           (input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3))){
+        if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
           shinyjs::disable(paste0("egg_", row_id))
           shinyjs::disable(paste0("vnotch_", row_id))
           shinyjs::disable(paste0("clutch_", row_id))
+          shinyjs::disable(paste0("shell_", row_id))
+          shinyjs::disable(paste0("cull_", row_id))
+          shinyjs::disable(paste0("disease_", row_id))
+        }else{
+           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
+          shinyjs::disable(paste0("egg_", row_id))
+          shinyjs::disable(paste0("vnotch_", row_id))
+          shinyjs::disable(paste0("clutch_", row_id))
+          shinyjs::enable(paste0("shell_", row_id))
+          shinyjs::enable(paste0("cull_", row_id))
+          shinyjs::enable(paste0("disease_", row_id))
         }else{
           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 2){
             shinyjs::enable(paste0("vnotch_", row_id))
             shinyjs::disable(paste0("egg_", row_id))
             shinyjs::disable(paste0("clutch_", row_id))
+            shinyjs::enable(paste0("shell_", row_id))
+            shinyjs::enable(paste0("cull_", row_id))
+            shinyjs::enable(paste0("disease_", row_id))
           }else{
             if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 3){
               shinyjs::enable(paste0("vnotch_", row_id))
               shinyjs::enable(paste0("egg_", row_id))
               shinyjs::enable(paste0("clutch_", row_id))
+              shinyjs::enable(paste0("shell_", row_id))
+              shinyjs::enable(paste0("cull_", row_id))
+              shinyjs::enable(paste0("cull_", row_id))
             }
           }
         }
+       }
       }, ignoreInit = T)
     })
   })
@@ -1791,7 +1808,7 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       ## 34:2 If lobster sex = 1 then can't use egg or vnotch fields (Violation impossible - see Autofills)
 
       ## 35 Shell hard
-      ## 35:1  Range + should only contain values if species code is lobster (2550)
+      ## 35:1  Range + should only contain values if species code is lobster (2550) (Violation impossible, see autofills - below is redundant:)
       # Create an observer for each spec_code and shell_hard field
       observeEvent(list(input[[paste0("shell_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
         range35 <- c(NA,1,2,3,4,5,6,7)
