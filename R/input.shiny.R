@@ -768,7 +768,7 @@ suppressWarnings({
             numericInput(paste0("kept_", row_id), "KEPT", min = 0, max = 1, value = NA)
         ),
         div(class = "compact-input",
-            numericInput(paste0("abund_", row_id), "ABUNDANCE", value = NA, min = 0)
+            numericInput(paste0("abund_", row_id), "ABUNDANCE", value = NA, min = 1)
         ),
         div(class = "compact-input",
             numericInput(paste0("cull_", row_id), "CULL", min = 1, max = 3, value = NA)
@@ -1967,6 +1967,41 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
         }
       }, ignoreInit = T)
 
+      ## 41 Kept
+      ## 41:1 Range
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("kept_", row_id)]]),{
+        hideFeedback(paste0("kept_", row_id))
+        checks$check41 <- T
+        if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
+          showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
+          checks$check41 <- F
+        }
+      }, ignoreInit = T)
+
+      ## 42 Abundance
+      ## 42:1 Range
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("abund_", row_id)]]),{
+        hideFeedback(paste0("abund_", row_id))
+        checks$check42 <- T
+        if(!input[[paste0("abund_", row_id)]] %in% c(NULL,NA) & input[[paste0("abund_", row_id)]] < 1){
+          showFeedbackDanger(paste0("abund_", row_id), "Abundance must be 1 or greater")
+          checks$check42 <- F
+        }
+      }, ignoreInit = T)
+
+      ## 43 Cull
+      ## 43:1 Range + Can only have values if species is lobster (Violation impossible, see autofills)
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("cull_", row_id)]]),{
+        hideFeedback(paste0("cull_", row_id))
+        checks$check43 <- T
+        if(!input[[paste0("cull_", row_id)]] %in% c(NULL,NA,1:3)){
+          showFeedbackDanger(paste0("cull_", row_id), "Allowed values are 1,2,3")
+          checks$check43 <- F
+        }else{
+          cull<-code.tab$Name[which(code.tab$Field %in% "Cull" & code.tab$Code %in% input[[paste0("cull_", row_id)]])]
+          showFeedback(paste0("cull_", row_id), cull)
+        }
+      }, ignoreInit = T)
 
 
     }) ## lapply
