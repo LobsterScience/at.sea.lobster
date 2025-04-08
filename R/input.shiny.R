@@ -1810,7 +1810,7 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("length_", row_id)]]),{
         hideFeedback(paste0("length_", row_id))
         if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("length_", row_id)]] %in% c(NA,NULL)){
-          showFeedbackWarning(paste0("length_", row_id), "No Value!")
+          showFeedbackWarning(paste0("length_", row_id), "Missing Value!")
         }
       }, ignoreInit = T)
 
@@ -1831,17 +1831,17 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
             hideFeedback(paste0("sex_", row_id))
             showFeedbackWarning(paste0("sex_", row_id), "Sex codes are for crustaceans only")
           }
-          ## 34:2 should have a value if species is lobster
-          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% c(NULL,NA)){
+          ## 34:2 should have a value if species is crustacean
+          if(input[[paste0("spec_code_", row_id)]] %in% crustaceans$SPECIES_CODE & input[[paste0("sex_", row_id)]] %in% c(NULL,NA)){
             hideFeedback(paste0("sex_", row_id))
-            showFeedbackWarning(paste0("sex_", row_id), "No Value!")
+            showFeedbackWarning(paste0("sex_", row_id), "Missing Value!")
           }
         }
       }, ignoreInit = T)
       ## 34:3 If lobster sex = 1 then can't use egg or vnotch fields (Violation impossible - see Autofills)
 
       ## 35 Shell hard
-      ## 35:1  Range + should only contain values if species code is lobster (2550) (Violation impossible, see autofills - below is redundant:)
+      ## 35:1  Range + can only contain values if species code is lobster (2550) (Violation impossible, see autofills - below is redundant:)
       ## Also contains autofills of descriptions
       # Create an observer for each spec_code and shell_hard field
       observeEvent(list(input[[paste0("shell_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
@@ -1867,7 +1867,7 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
               }
               ## 35:2 Should have a value if species is lobster
               if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("shell_", row_id)]] %in% c(NULL,NA)){
-                showFeedbackWarning(paste0("shell_", row_id), "No Value!")
+                showFeedbackWarning(paste0("shell_", row_id), "Missing Value!")
               }
             }
           }else{
@@ -1900,13 +1900,14 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           }
           ## 36: 2 should have a value if species is chosen
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
-            showFeedbackWarning(paste0("cond_", row_id), "No value!")
+            showFeedbackWarning(paste0("cond_", row_id), "Missing value!")
           }
         }
       }, ignoreInit = T)
 
       ## 37 Shell Disease
-      ## 37:1 Range + should have a value if species is lobster (includes autofilling of descritptions)
+      ## 37:1 Can only have values if species is lobster (violation impossible - see autofills)
+      ## 37:2 Range + should have a value if species is lobster (includes autofilling of descritptions)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("disease_", row_id)]]),{
         hideFeedback(paste0("disease_", row_id))
         checks$check37 <- T
@@ -1919,12 +1920,13 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           showFeedback(paste0("disease_", row_id), disease)
         }
         if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("disease_", row_id)]] %in% c(NULL,NA)){
-          showFeedbackWarning(paste0("disease_", row_id), "No value!")
+          showFeedbackWarning(paste0("disease_", row_id), "Missing value!")
         }
       }, ignoreInit = T)
 
       ## 38 Egg stage
-      ## 38: 1 range + (includes autofills of descriptions)
+      ## 38:1 range + Can only have value if species is berried lobster (violation impossible - see autofills)
+      ## (below includes autofills of descriptions)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("egg_", row_id)]]),{
         hideFeedback(paste0("egg_", row_id))
         checks$check38 <- T
@@ -1939,7 +1941,8 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       }, ignoreInit = T)
 
       ## 39 Clutch
-      ## 39:1 range + (includes autofills of descriptions)
+      ## 39:1 range + Can only have values for berried lobster (violation impossible - see autofills)
+      ## (also includes autofills of descriptions below)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("clutch_", row_id)]]),{
         hideFeedback(paste0("clutch_", row_id))
         checks$check39 <- T
@@ -1950,6 +1953,17 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
         if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("clutch_", row_id)]] %in% c(1:3)){
           clutch<-code.tab$Name[which(code.tab$Field %in% "Clutch" & code.tab$Code %in% input[[paste0("clutch_", row_id)]])]
           showFeedback(paste0("clutch_", row_id), clutch)
+        }
+      }, ignoreInit = T)
+
+      ## 40 Vnotch
+      ## 40:1 range + can only have values for female lobster (violation impossible - see autofills)
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("vnotch_", row_id)]]),{
+        hideFeedback(paste0("vnotch_", row_id))
+        checks$check40 <- T
+        if(!input[[paste0("vnotch_", row_id)]] %in% c(NULL,NA,0:5)){
+          showFeedbackDanger(paste0("vnotch_", row_id), "Allowed values are 0,1,2,3,4,5")
+          checks$check40 <- F
         }
       }, ignoreInit = T)
 
