@@ -753,13 +753,13 @@ suppressWarnings({
             numericInput(paste0("cond_", row_id), "CONDITION", min =0, max = 7,value = NA)
         ),
         div(class = "compact-input",
-            numericInput(paste0("disease_", row_id), "SHELL DISEASE", value = NA, min = 0)
+            numericInput(paste0("disease_", row_id), "SHELL DISEASE", value = NA, min = 0, max = 3)
         ),
         div(class = "compact-input",
             numericInput(paste0("egg_", row_id), "EGG STAGE", min = 1, max = 4, value = NA)
         ),
         div(class = "compact-input",
-            numericInput(paste0("clutch_", row_id), "CLUTCH %", value = NA, min = 0, max = 100)
+            numericInput(paste0("clutch_", row_id), "CLUTCH %", value = NA, min = 1, max = 3)
         ),
         div(class = "compact-input",
             numericInput(paste0("vnotch_", row_id), "VNOTCH", min = 0, max = 5, value = NA)
@@ -1139,11 +1139,22 @@ suppressWarnings({
           shinyjs::disable(paste0("shell_", row_id))
           shinyjs::disable(paste0("cull_", row_id))
           shinyjs::disable(paste0("disease_", row_id))
+          ## need to clear any disabled fields if theres already values in them
+          updateNumericInput(session, paste0("egg_", row_id), value = NA)
+          updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
+          updateNumericInput(session, paste0("clutch_", row_id), value = NA)
+          updateNumericInput(session, paste0("shell_", row_id), value = NA)
+          updateNumericInput(session, paste0("cull_",row_id), value = NA)
+          updateNumericInput(session, paste0("disease_", row_id), value = NA)
+
         }else{
            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
           shinyjs::disable(paste0("egg_", row_id))
           shinyjs::disable(paste0("vnotch_", row_id))
           shinyjs::disable(paste0("clutch_", row_id))
+          updateNumericInput(session, paste0("egg_", row_id), value = NA)
+          updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
+          updateNumericInput(session, paste0("clutch_", row_id), value = NA)
           shinyjs::enable(paste0("shell_", row_id))
           shinyjs::enable(paste0("cull_", row_id))
           shinyjs::enable(paste0("disease_", row_id))
@@ -1152,6 +1163,8 @@ suppressWarnings({
             shinyjs::enable(paste0("vnotch_", row_id))
             shinyjs::disable(paste0("egg_", row_id))
             shinyjs::disable(paste0("clutch_", row_id))
+            updateNumericInput(session, paste0("egg_", row_id), value = NA)
+            updateNumericInput(session, paste0("clutch_", row_id), value = NA)
             shinyjs::enable(paste0("shell_", row_id))
             shinyjs::enable(paste0("cull_", row_id))
             shinyjs::enable(paste0("disease_", row_id))
@@ -1162,7 +1175,7 @@ suppressWarnings({
               shinyjs::enable(paste0("clutch_", row_id))
               shinyjs::enable(paste0("shell_", row_id))
               shinyjs::enable(paste0("cull_", row_id))
-              shinyjs::enable(paste0("cull_", row_id))
+              shinyjs::enable(paste0("disease_", row_id))
             }
           }
         }
@@ -1171,6 +1184,7 @@ suppressWarnings({
 
 
     })
+
   })
 ####################################################################################################################################################
 ##BEGINNING OF INTERACTIVE SERVER CODE (BUTTON CLICKS)
@@ -1791,19 +1805,17 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       ## 32:1 No restrictions
 
       ## 33 Length
-      ## 33:1 ## length should have a value if there is a species choice
+      ## 33: 1
+      ## 33:2 length should have a value if there is a species choice
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("length_", row_id)]]),{
         hideFeedback(paste0("length_", row_id))
         if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("length_", row_id)]] %in% c(NA,NULL)){
           showFeedbackWarning(paste0("length_", row_id), "No Value!")
-          checks$check33 <- F
-        }else{
-          checks$check33 <- T
         }
       }, ignoreInit = T)
 
       ## 34 Sex
-      ## 34:1 Range 1-3 and should only be for crustaceans
+      ## 34:1 Range 1-3 and should only be for crustaceans (includes autofilling descriptions)
       observeEvent(list(input[[paste0("sex_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
         if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA,1:3)){
           hideFeedback(paste0("sex_", row_id))
@@ -1812,24 +1824,29 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
         }else{
           hideFeedback(paste0("sex_", row_id))
           checks$check34 <- T
+          ### Autofill Sex descriptions
+              sex <-code.tab$Name[which(code.tab$Field %in% "Sex" & code.tab$Code %in% input[[paste0("sex_", row_id)]])]
+              showFeedback(paste0("sex_", row_id), sex)
           if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA) & !input[[paste0("spec_code_", row_id)]] %in% crustaceans$SPECIES_CODE){
+            hideFeedback(paste0("sex_", row_id))
             showFeedbackWarning(paste0("sex_", row_id), "Sex codes are for crustaceans only")
           }
           ## 34:2 should have a value if species is lobster
           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% c(NULL,NA)){
+            hideFeedback(paste0("sex_", row_id))
             showFeedbackWarning(paste0("sex_", row_id), "No Value!")
           }
         }
       }, ignoreInit = T)
-      ## 34:2 If lobster sex = 1 then can't use egg or vnotch fields (Violation impossible - see Autofills)
-      ## 34:3
+      ## 34:3 If lobster sex = 1 then can't use egg or vnotch fields (Violation impossible - see Autofills)
 
       ## 35 Shell hard
       ## 35:1  Range + should only contain values if species code is lobster (2550) (Violation impossible, see autofills - below is redundant:)
+      ## Also contains autofills of descriptions
       # Create an observer for each spec_code and shell_hard field
       observeEvent(list(input[[paste0("shell_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
-        range35 <- c(NA,1,2,3,4,5,6,7)
-        if(!input[[paste0("shell_", row_id)]] %in% range35){
+        range35 <- c(1,2,3,4,5,6,7)
+        if(!input[[paste0("shell_", row_id)]] %in% c(NULL,NA,range35)){
           showFeedbackDanger(paste0("shell_", row_id), paste0("Shell Hardness range is ",paste0(range35, collapse = ",")))
           checks$check35<- F
         }else{
@@ -1838,11 +1855,16 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
             new_spec <- input[[paste0("spec_code_", row_id)]]
             new_shell <- input[[paste0("shell_", row_id)]]
             if(!new_spec %in% c(2550,2552) & !is.na(new_shell)){
-              showFeedbackDanger(paste0("shell_", row_id), "Shell Hardness allowed for lobster (2550) only")
+              showFeedbackDanger(paste0("shell_", row_id), "Shell Hardness is for lobster only")
               checks$check35<- F
             }else{
               hideFeedback(paste0("shell_", row_id))
               checks$check35<- T
+              ## autofill descriptions
+              if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("shell_", row_id)]] %in% range35){
+                shell<-code.tab$Name[which(code.tab$Field %in% "Shell Hardness" & code.tab$Code %in% input[[paste0("shell_", row_id)]])]
+                showFeedback(paste0("shell_", row_id), shell)
+              }
               ## 35:2 Should have a value if species is lobster
               if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("shell_", row_id)]] %in% c(NULL,NA)){
                 showFeedbackWarning(paste0("shell_", row_id), "No Value!")
@@ -1884,13 +1906,53 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       }, ignoreInit = T)
 
       ## 37 Shell Disease
-      ## 37:1 should have a value if species is lobster
+      ## 37:1 Range + should have a value if species is lobster (includes autofilling of descritptions)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("disease_", row_id)]]),{
         hideFeedback(paste0("disease_", row_id))
+        checks$check37 <- T
+        if(!input[[paste0("disease_", row_id)]] %in% c(NULL,NA,0:3)){
+          showFeedbackDanger(paste0("disease_", row_id), "Allowed values are 0,1,2,3")
+          checks$check37 <- F
+        }
+        if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("disease_", row_id)]] %in% c(0:3)){
+          disease<-code.tab$Name[which(code.tab$Field %in% "Shell Disease" & code.tab$Code %in% input[[paste0("disease_", row_id)]])]
+          showFeedback(paste0("disease_", row_id), disease)
+        }
         if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("disease_", row_id)]] %in% c(NULL,NA)){
           showFeedbackWarning(paste0("disease_", row_id), "No value!")
         }
       }, ignoreInit = T)
+
+      ## 38 Egg stage
+      ## 38: 1 range + (includes autofills of descriptions)
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("egg_", row_id)]]),{
+        hideFeedback(paste0("egg_", row_id))
+        checks$check38 <- T
+        if(!input[[paste0("egg_", row_id)]] %in% c(NULL,NA,1:4)){
+          showFeedbackDanger(paste0("egg_", row_id), "Allowed values are 1,2,3,4")
+          checks$check38 <- F
+        }
+        if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("egg_", row_id)]] %in% c(1:4)){
+          egg<-code.tab$Name[which(code.tab$Field %in% "Lobster Egg" & code.tab$Code %in% input[[paste0("egg_", row_id)]])]
+          showFeedback(paste0("egg_", row_id), egg)
+        }
+      }, ignoreInit = T)
+
+      ## 39 Clutch
+      ## 39:1 range + (includes autofills of descriptions)
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("clutch_", row_id)]]),{
+        hideFeedback(paste0("clutch_", row_id))
+        checks$check39 <- T
+        if(!input[[paste0("clutch_", row_id)]] %in% c(NULL,NA,1:3)){
+          showFeedbackDanger(paste0("clutch_", row_id), "Allowed values are 1,2,3")
+          checks$check39 <- F
+        }
+        if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("clutch_", row_id)]] %in% c(1:3)){
+          clutch<-code.tab$Name[which(code.tab$Field %in% "Clutch" & code.tab$Code %in% input[[paste0("clutch_", row_id)]])]
+          showFeedback(paste0("clutch_", row_id), clutch)
+        }
+      }, ignoreInit = T)
+
 
 
     }) ## lapply
