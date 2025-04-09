@@ -1977,7 +1977,7 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
 
       ## 41 Kept
       ## 41:1 Range + Shouldn't be kept if length < MLS
-      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("kept_", row_id)]], input[[paste0("length_", row_id)]], input$lfa,
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]], input[[paste0("kept_", row_id)]], input[[paste0("length_", row_id)]], input$lfa,
                         input[[paste0("vnotch_", row_id)]]),{
         hideFeedback(paste0("kept_", row_id))
         checks$check41 <- T
@@ -1996,6 +1996,20 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
              !input[[paste0("vnotch_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
              input$lfa %in% lfa.data$LFA[which(!lfa.data$vnotch.rule %in% "none")]){
             showFeedbackWarning(paste0("kept_", row_id), "Warning!: There are restrictions for retaining V-notched lobster in chosen LFA. Check specific regulations.")
+          }
+          ## 41:3 shouldn't be kept if female between 114-124mm in LFA 31A
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
+             !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
+             input$lfa %in% "L31A" && input[[paste0("length_", row_id)]]>=114 && input[[paste0("length_", row_id)]]<=124 &&
+             input[[paste0("sex_", row_id)]] %in% c(2,3)){
+            showFeedbackWarning(paste0("kept_", row_id), "Warning!: Retaining female lobster between 114 and 124 mm is prohibited in LFA 31A.")
+          }
+          ## 41:4 shouldn't be kept if female > 135 in LFA30
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
+             !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
+             input$lfa %in% "L30" && input[[paste0("length_", row_id)]]>135 &&
+             input[[paste0("sex_", row_id)]] %in% c(2,3)){
+            showFeedbackWarning(paste0("kept_", row_id), "Warning!: Retaining female lobster greater than 135 mm is prohibited in LFA 30.")
           }
         }
       }, ignoreInit = T)
