@@ -436,6 +436,7 @@ suppressWarnings({
   ## bring in species and other code lists so they only have to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
   crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
+  wsu <- spec.tab[grepl("whelk|starfish|urchin", spec.tab$COMMON, ignore.case = TRUE), ]
   code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
   condition <- readRDS(paste0(system.file("data", package = "Bycatch"), "/condition.rds"))
   lfa.data <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAdata.rds"))
@@ -2015,13 +2016,18 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       }, ignoreInit = T)
 
       ## 42 Abundance
-      ## 42:1 Range
+      ## 42:1 Range + Shouldn't be > 1 for anything except whelks, starfish, urchins
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("abund_", row_id)]]),{
         hideFeedback(paste0("abund_", row_id))
         checks$check42 <- T
         if(!input[[paste0("abund_", row_id)]] %in% c(NULL,NA) & input[[paste0("abund_", row_id)]] < 1){
           showFeedbackDanger(paste0("abund_", row_id), "Abundance must be 1 or greater")
           checks$check42 <- F
+        }else{
+          if(!input[[paste0("abund_", row_id)]] %in% c(NULL,NA) & input[[paste0("abund_", row_id)]] > 1 &&
+             !input[[paste0("spec_code_", row_id)]] %in% wsu$SPECIES_CODE){
+            showFeedbackWarning(paste0("abund_", row_id), "Abundance should only be greater than 1 for Whelks, Starfish and Urchins")
+          }
         }
       }, ignoreInit = T)
 
