@@ -438,6 +438,7 @@ suppressWarnings({
   crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
   code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
   condition <- readRDS(paste0(system.file("data", package = "Bycatch"), "/condition.rds"))
+  lfa.data <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAdata.rds"))
 ####################################################################################################################################
   ### DEFINE DATABASE UPDATING FUNCTIONS (FOR WHEN 'NEXT' BUTTONS ARE CLICKED)
   ##FISH
@@ -1805,14 +1806,21 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       ## 32:1 No restrictions
 
       ## 33 Length
-      ## 33: 1
-      ## 33:2 length should have a value if there is a species choice
+      ## 33: 1 length should have a value if there is a species choice (Includes autofill of units cm/mm)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("length_", row_id)]]),{
         hideFeedback(paste0("length_", row_id))
         if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("length_", row_id)]] %in% c(NA,NULL)){
           showFeedbackWarning(paste0("length_", row_id), "Missing Value!")
+        }else{
+          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2551,2552)){
+            showFeedback(paste0("length_", row_id), "mm")
+          }
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & !input[[paste0("spec_code_", row_id)]] %in% c(2550,2551,2552)){
+            showFeedback(paste0("length_", row_id), "cm")
+          }
         }
       }, ignoreInit = T)
+      ## 33:2
 
       ## 34 Sex
       ## 34:1 Range 1-3 and should only be for crustaceans (includes autofilling descriptions)
@@ -1968,13 +1976,27 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       }, ignoreInit = T)
 
       ## 41 Kept
-      ## 41:1 Range
-      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("kept_", row_id)]]),{
+      ## 41:1 Range + Shouldn't be kept if length < MLS
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("kept_", row_id)]], input[[paste0("length_", row_id)]], input$lfa,
+                        input[[paste0("vnotch_", row_id)]]),{
         hideFeedback(paste0("kept_", row_id))
         checks$check41 <- T
         if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
           showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
           checks$check41 <- F
+        }
+        if(input[[paste0("kept_", row_id)]] %in% 1){  ## if lobster is being recorded as kept, there may be various warnings for prohibitions:
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
+             !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"")
+             && input[[paste0("length_", row_id)]] < lfa.data$MLS[which(lfa.data$LFA %in% input$lfa)]){
+            showFeedbackWarning(paste0("kept_", row_id), "Warning!: you are recording retaining a lobster below Minimum Legal Size for chosen LFA")
+          }
+          ## 41:2 shouldn't be kept if vnotched in prohibited LFAs
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
+             !input[[paste0("vnotch_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
+             input$lfa %in% lfa.data$LFA[which(!lfa.data$vnotch.rule %in% "none")]){
+            showFeedbackWarning(paste0("kept_", row_id), "Warning!: There are restrictions for retaining V-notched lobster in chosen LFA. Check specific regulations.")
+          }
         }
       }, ignoreInit = T)
 
