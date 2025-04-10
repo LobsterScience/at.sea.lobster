@@ -1455,7 +1455,7 @@ suppressWarnings({
 ## 8:1  Should have value (Warning)
   observeEvent(input$lfa, {
     if(input$lfa %in% c(NA,NULL,"")){
-      showFeedbackDanger("lfa", "Warning: No LFA Chosen!")
+      showFeedbackWarning("lfa", "Warning: No LFA Chosen!")
     }else{
       hideFeedback("lfa")
     }
@@ -1537,35 +1537,58 @@ suppressWarnings({
 ## 16:1 Range + Coordinate should fall within selected LFA
   observeEvent(list(input$lon, input$lat, input$lfa),{
     hideFeedback("lon")
-    #hideFeedback("lat")
-
-    if(!input$lon %in% c(NULL,NA) && !input$lat %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA)){
+    hideFeedback("lat")
+    if(!input$lon %in% c(NULL,NA) && !input$lat %in% c(NULL,NA)){
       # convert coordinate format to decimal degrees
-      lon1 <- floor(input$lon)
-      lon2 <- round(input$lon - lon1,2)
-      londeg <- lon1 %/% 100
-      lonmin <- lon1 %% 100
-      lonmin <- lonmin+lon2
+      # lon1 <- floor(input$lon)
+      # lon2 <- round(input$lon - lon1,2)
+      # londeg <- lon1 %/% 100
+      # lonmin <- lon1 %% 100
+      # lonmin <- lonmin+lon2
+      # lonmin <- lonmin/60
+      # lon <- -(londeg+lonmin)
+      # print(lon)
+      #
+      # lat1 <- floor(input$lat)
+      # lat2 <- round(input$lat - lat1,2)
+      # latdeg <- lat1 %/% 100
+      # latmin <- lat1 %% 100
+      # latmin <- latmin+lat2
+      # latmin <- latmin/60
+      # lat <- latdeg+latmin
+      # print(lat)
+
+      lon <- format(input$lon, scientific = FALSE)
+      londeg.txt <- substr(lon, 1, 2)
+      londeg <- as.numeric(londeg.txt)
+      lonmin.txt <- substr(lon, 3, nchar(lon))
+      lonmin <- round(as.numeric(lonmin.txt),2)
       lonmin <- lonmin/60
-      lon <- -(londeg+lonmin)
-      print(lon)
+      lon <-  -(londeg+lonmin)
 
-      lat1 <- floor(input$lat)
-      lat2 <- round(input$lat - lat1,2)
-      latdeg <- lat1 %/% 100
-      latmin <- lat1 %% 100
-      latmin <- latmin+lat2
+      lat <- format(input$lat, scientific = FALSE)
+      latdeg.txt <- substr(lat, 1, 2)
+      latdeg <- as.numeric(latdeg.txt)
+      latmin.txt <- substr(lat, 3, nchar(lat))
+      latmin <- round(as.numeric(latmin.txt),2)
       latmin <- latmin/60
-      lat <- latdeg+latmin
-      print(lat)
+      lat <-  latdeg+latmin
 
-      point <-  st_sfc(st_point(c(lon, lat)), crs = st_crs(lfapolys))
-      point_sf <- st_sf(geometry = point)
-      chose.lfa <- lfapolys %>% filter(LFA %in% input$lfa)
-      result <- any(st_within(point_sf, chose.lfa, sparse = FALSE))
+      showFeedback("lon",paste0(londeg.txt,"° ",lonmin.txt,"' W"))
+      showFeedback("lat",paste0(latdeg.txt,"° ",latmin.txt,"' N"))
 
-      if(result %in% FALSE){
-        showFeedbackWarning("lon","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+      if(!input$lfa %in% c(NULL,NA,"")){
+        point <-  st_sfc(st_point(c(lon, lat)), crs = st_crs(lfapolys))
+        point_sf <- st_sf(geometry = point)
+        chose.lfa <- lfapolys %>% filter(LFA %in% input$lfa)
+        result <- any(st_within(point_sf, chose.lfa, sparse = FALSE))
+
+        if(result %in% FALSE){
+          hideFeedback("lon")
+          hideFeedback("lat")
+          showFeedbackWarning("lon","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+          showFeedbackWarning("lat","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+        }
       }
     }
 
