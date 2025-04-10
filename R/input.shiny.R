@@ -1,7 +1,7 @@
 
 
 #' @title input.trip
-#' @import dplyr RSQLite shiny svDialogs shinyjs shinyFeedback
+#' @import dplyr RSQLite shiny svDialogs shinyjs shinyFeedback sf
 #' @description Creates GUI for entering bycatch data by trip
 #' @export
 
@@ -433,6 +433,7 @@ fluidRow(
 server <- function(input, output, session) {
 suppressWarnings({
 
+  ## DATA FILE IMPORTS
   ## bring in species and other code lists so they only have to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
   crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
@@ -440,6 +441,12 @@ suppressWarnings({
   code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
   condition <- readRDS(paste0(system.file("data", package = "Bycatch"), "/condition.rds"))
   lfa.data <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAdata.rds"))
+  ## Spatial files
+  lfapolys <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAPolysSF.rds"))
+  lfapolys$LFA <- paste0("L",lfapolys$LFA)
+  lfapolys <- lfapolys %>% mutate(LFA <- ifelse(LFA %in% "L311","L31A",
+                                                ifelse(LFA %in% "L312","L31B",
+                                                       LFA)))
 ####################################################################################################################################
   ### DEFINE DATABASE UPDATING FUNCTIONS (FOR WHEN 'NEXT' BUTTONS ARE CLICKED)
   ##FISH
@@ -1525,8 +1532,48 @@ suppressWarnings({
   })
 
 ## 15 Latitude
+## 15:1 Range + Coordinate should fall within selected LFA
 ## 16 Longitude
+## 16:1 Range + Coordinate should fall within selected LFA
+  observeEvent(list(input$lon, input$lat, input$lfa),{
+    hideFeedback("lon")
+    #hideFeedback("lat")
+
+    if(!input$lon %in% c(NULL,NA) && !input$lat %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA)){
+      # convert coordinate format to decimal degrees
+      lon1 <- floor(input$lon)
+      lon2 <- round(input$lon - lon1,2)
+      londeg <- lon1 %/% 100
+      lonmin <- lon1 %% 100
+      lonmin <- lonmin+lon2
+      lonmin <- lonmin/60
+      lon <- -(londeg+lonmin)
+      print(lon)
+
+      lat1 <- floor(input$lat)
+      lat2 <- round(input$lat - lat1,2)
+      latdeg <- lat1 %/% 100
+      latmin <- lat1 %% 100
+      latmin <- latmin+lat2
+      latmin <- latmin/60
+      lat <- latdeg+latmin
+      print(lat)
+
+      point <-  st_sfc(st_point(c(lon, lat)), crs = st_crs(lfapolys))
+      point_sf <- st_sf(geometry = point)
+      chose.lfa <- lfapolys %>% filter(LFA %in% input$lfa)
+      result <- any(st_within(point_sf, chose.lfa, sparse = FALSE))
+
+      if(result %in% FALSE){
+        showFeedbackWarning("lon","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+      }
+    }
+
+  }, ignoreInit = T)
+
+
 ## 17 Grid No
+## 17:1 Grid number should fall within selecte LFA
 
 ## 18 Depth (FM)
 ## 18:1 range and warning if > 200 m

@@ -16,4 +16,5 @@ Imports:
     svDialogs,
     shiny,
     shinyjs,
-    shinyFeedback
+    shinyFeedback,
+    sf
