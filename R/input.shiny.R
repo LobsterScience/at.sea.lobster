@@ -1898,6 +1898,11 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
         }else{
           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2551,2552)){
             showFeedback(paste0("length_", row_id), "mm")
+            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
+               (input[[paste0("length_", row_id)]] < 20 | input[[paste0("length_", row_id)]] > 250)){
+              hideFeedback(paste0("length_", row_id))
+              showFeedbackWarning(paste0("length_", row_id), "This is an unlikely length for caught lobster!")
+            }
           }
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & !input[[paste0("spec_code_", row_id)]] %in% c(2550,2551,2552)){
             showFeedback(paste0("length_", row_id), "cm")
