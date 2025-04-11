@@ -1591,12 +1591,16 @@ suppressWarnings({
           point_sf <- st_sf(geometry = point)
           chose.lfa <- lfapolys %>% filter(LFA %in% input$lfa)
           result <- any(st_within(point_sf, chose.lfa, sparse = FALSE))
-
           if(result %in% FALSE){
-            hideFeedback("lon")
-            hideFeedback("lat")
-            showFeedbackWarning("lon","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
-            showFeedbackWarning("lat","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+            ## check if the point is very nearby the border before throwing a warning
+              dist_m <- st_distance(point_sf, chose.lfa)
+              d <- as.numeric(min(dist_m))
+              if(d>2000){ ## 2km allowed margin of error
+                hideFeedback("lon")
+                hideFeedback("lat")
+                showFeedbackWarning("lon","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+                showFeedbackWarning("lat","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+              }
           }
         }
       }
