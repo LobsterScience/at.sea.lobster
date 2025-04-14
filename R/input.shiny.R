@@ -414,7 +414,7 @@ fluidRow(
 fluidRow(     ### use button formatted title class for FISH row just for easy formatting consistency
   div(
     class = "title-with-button",
-    div(class = "title-panel", titlePanel("FISH INFO")))
+    div(class = "title-panel", titlePanel(HTML("<span style='font-size: 24px;'> FISH INFO</span> <span style='font-size: 16px;'>* For Empty Trap: Species Code = 9999, Abundance = 0</span>"))))
   ),
 ## dynamically duplicating fish info row:
 fluidRow(
@@ -783,7 +783,7 @@ suppressWarnings({
             numericInput(paste0("kept_", row_id), "KEPT", min = 0, max = 1, value = NA)
         ),
         div(class = "compact-input",
-            numericInput(paste0("abund_", row_id), "ABUNDANCE", value = NA, min = 1)
+            numericInput(paste0("abund_", row_id), "ABUNDANCE", value = NA, min = 0)
         ),
         div(class = "compact-input",
             numericInput(paste0("cull_", row_id), "CULL", min = 1, max = 3, value = NA)
@@ -1147,6 +1147,15 @@ suppressWarnings({
       ### AND
       ## control contextual restrictions to fish row field usage (which fields can be used for what species/sex selections etc.)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]]),{
+        ## clear all fields if species code becomes empty
+        if(input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA)){
+          updateNumericInput(session, paste0("length_", row_id), value = NA)
+          updateNumericInput(session, paste0("sex_",row_id), value = NA)
+          updateNumericInput(session, paste0("cond_", row_id), value = NA)
+          updateNumericInput(session, paste0("kept_", row_id), value = NA)
+          updateNumericInput(session, paste0("abund_", row_id), value = NA)
+        }
+        ## if non-lobster value entered
         if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
           shinyjs::disable(paste0("egg_", row_id))
           shinyjs::disable(paste0("vnotch_", row_id))
@@ -1162,6 +1171,29 @@ suppressWarnings({
           updateNumericInput(session, paste0("cull_",row_id), value = NA)
           updateNumericInput(session, paste0("disease_", row_id), value = NA)
 
+          ### if species is 9999 (empty trap) silence all remaining fields except abundance
+          if(input[[paste0("spec_code_", row_id)]] %in% 9999){
+            shinyjs::disable(paste0("length_", row_id))
+            shinyjs::disable(paste0("sex_", row_id))
+            shinyjs::disable(paste0("cond_", row_id))
+            shinyjs::disable(paste0("kept_", row_id))
+            updateNumericInput(session, paste0("length_", row_id), value = NA)
+            updateNumericInput(session, paste0("sex_",row_id), value = NA)
+            updateNumericInput(session, paste0("cond_", row_id), value = NA)
+            updateNumericInput(session, paste0("kept_", row_id), value = NA)
+            ## also clear any warnings/messages (use delay to out-wait warnings generated anywhere else)
+            delay(100,{
+              hideFeedback(paste0("length_", row_id))
+              hideFeedback(paste0("sex_", row_id))
+              hideFeedback(paste0("cond_", row_id))
+              hideFeedback(paste0("kept_", row_id))
+            })
+          }else{
+            shinyjs::enable(paste0("length_", row_id))
+            shinyjs::enable(paste0("sex_", row_id))
+            shinyjs::enable(paste0("cond_", row_id))
+            shinyjs::enable(paste0("kept_", row_id))
+          }
         }else{
            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
           shinyjs::disable(paste0("egg_", row_id))
@@ -1902,24 +1934,32 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       observe({
         row.num <- as.numeric(gsub("\\D", "", row_id))
         num.rows <- max(as.numeric(gsub("\\D", "", current_rows)))
-        if((row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
-            input[[paste0("spec_code_row_",row.num-1)]] %in% c(NULL,NA,"")) |
-           (row.num<num.rows &&
-            input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
-           !input[[paste0("spec_code_row_",row.num+1)]] %in% c(NULL,NA,""))
-           ){
-          showFeedbackDanger(paste0("spec_code_", row_id),"Rows must be filled sequentially!")
+        if(input$spec_code_row_1 %in% c(NULL,NA) && !input$bait_code  %in% c(NULL,NA)){
+          showFeedbackDanger("spec_code_row_1","First row must have species code to submit trap")
           checks$check31 <- F
         }else{
-          hideFeedback(paste0("spec_code_", row_id))
-          ## check that chosen code exists in species code table
-          if(!is.null(input[[paste0("spec_code_", row_id)]]) && !is.na(input[[paste0("spec_code_", row_id)]]) &&
-             !input[[paste0("spec_code_", row_id)]] %in% spec.tab$SPECIES_CODE){
-            showFeedbackWarning(paste0("spec_code_", row_id),"Warning! This code is not on the list of known species!")
+          if((row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
+              input[[paste0("spec_code_row_",row.num-1)]] %in% c(NULL,NA,"")) |
+             (row.num<num.rows &&
+              input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
+              !input[[paste0("spec_code_row_",row.num+1)]] %in% c(NULL,NA,""))
+          ){
+            hideFeedback(paste0("spec_code_", row_id))
+            showFeedbackDanger(paste0("spec_code_", row_id),"Rows must be filled sequentially!")
+            checks$check31 <- F
+          }else{
+            hideFeedback(paste0("spec_code_", row_id))
+            checks$check31 <- T
+            ## check that chosen code exists in species code table
+            if(!is.null(input[[paste0("spec_code_", row_id)]]) && !is.na(input[[paste0("spec_code_", row_id)]]) &&
+               !input[[paste0("spec_code_", row_id)]] %in% spec.tab$SPECIES_CODE){
+              showFeedbackWarning(paste0("spec_code_", row_id),"Warning! This code is not on the list of known species!")
+            }
           }
-          checks$check31 <- T
         }
       })
+
+
 
       ## 32 COMMON
       ## 32:1 No restrictions
@@ -2143,14 +2183,24 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("abund_", row_id)]]),{
         hideFeedback(paste0("abund_", row_id))
         checks$check42 <- T
-        if(!input[[paste0("abund_", row_id)]] %in% c(NULL,NA) & input[[paste0("abund_", row_id)]] < 1){
-          showFeedbackDanger(paste0("abund_", row_id), "Abundance must be 1 or greater")
+        if(!input[[paste0("abund_", row_id)]] %in% c(NULL,NA) & input[[paste0("abund_", row_id)]] < 0){
+          showFeedbackDanger(paste0("abund_", row_id), "Abundance must be 0 or greater")
           checks$check42 <- F
         }else{
           if(!input[[paste0("abund_", row_id)]] %in% c(NULL,NA) & input[[paste0("abund_", row_id)]] > 1 &&
              !input[[paste0("spec_code_", row_id)]] %in% wsu$SPECIES_CODE){
             showFeedbackWarning(paste0("abund_", row_id), "Abundance should only be greater than 1 for Whelks, Starfish and Urchins")
           }
+        }
+        ## 42:2 Cannot be blank if spec code is 9999 (should be 0)
+        if(input[[paste0("spec_code_", row_id)]] %in% 9999 && input[[paste0("abund_", row_id)]] %in% c(NULL,NA)){
+          hideFeedback(paste0("abund_", row_id))
+          showFeedbackDanger(paste0("abund_", row_id), "Needs value if Species Code = 9999 (should be 0)")
+          checks$check42 <- F
+        }
+        if(input[[paste0("spec_code_", row_id)]] %in% 9999 && !input[[paste0("abund_", row_id)]] %in% c(NULL,NA,0)){
+          hideFeedback(paste0("abund_", row_id))
+          showFeedbackWarning(paste0("abund_", row_id), "Should be 0 for Species Code = 9999")
         }
       }, ignoreInit = T)
 
