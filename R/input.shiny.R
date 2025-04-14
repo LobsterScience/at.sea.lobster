@@ -447,6 +447,12 @@ suppressWarnings({
   lfapolys <- lfapolys %>% mutate(LFA <- ifelse(LFA %in% "L311","L31A",
                                                 ifelse(LFA %in% "L312","L31B",
                                                        LFA)))
+  gridpolys <- readRDS(paste0(system.file("data", package = "Bycatch"), "/GridPolysSF.rds"))
+  gridpolys$LFA <- paste0("L",gridpolys$LFA)
+  gridpolys <- gridpolys %>% mutate(LFA <- ifelse(LFA %in% "L311","L31A",
+                                                ifelse(LFA %in% "L312","L31B",
+                                                       LFA)))
+
 ####################################################################################################################################
   ### DEFINE DATABASE UPDATING FUNCTIONS (FOR WHEN 'NEXT' BUTTONS ARE CLICKED)
   ##FISH
@@ -1532,10 +1538,10 @@ suppressWarnings({
   })
 
 ## 15 Latitude
-## 15:1 Range + Coordinate should fall within selected LFA
+## 15:1 Range + Coordinate should fall within selected LFA and Grid Number (with some margin for error)
 ## 16 Longitude
-## 16:1 Range + Coordinate should fall within selected LFA
-  observeEvent(list(input$lon, input$lat, input$lfa),{
+## 16:1 Range + Coordinate should fall within selected LFA and Grid Number (with some margin for error)
+  observeEvent(list(input$lon, input$lat, input$lfa, input$grid_num),{
     hideFeedback("lon")
     hideFeedback("lat")
     checks$check16 <- T
@@ -1590,18 +1596,36 @@ suppressWarnings({
           point <-  st_sfc(st_point(c(lon, lat)), crs = st_crs(lfapolys))
           point_sf <- st_sf(geometry = point)
           chose.lfa <- lfapolys %>% filter(LFA %in% input$lfa)
-          result <- any(st_within(point_sf, chose.lfa, sparse = FALSE))
-          if(result %in% FALSE){
+          lfa.result <- any(st_within(point_sf, chose.lfa, sparse = FALSE))
+          lfa.pass <- T ## set lfa pass until proven failed
+          if(lfa.result %in% FALSE){
             ## check if the point is very nearby the border before throwing a warning
-              dist_m <- st_distance(point_sf, chose.lfa)
-              d <- as.numeric(min(dist_m))
-              if(d>2000){ ## 2km allowed margin of error
+              l.dist_m <- st_distance(point_sf, chose.lfa)
+              ld <- as.numeric(min(l.dist_m))
+              if(ld>2000){ ## 2km allowed margin of error
                 hideFeedback("lon")
                 hideFeedback("lat")
-                showFeedbackWarning("lon","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
-                showFeedbackWarning("lat","Problem! Coordinates do not seem to fall within chosen LFA! Please check!")
+                showFeedbackWarning("lon","Coordinates do not seem to fall within chosen LFA! Please check!")
+                showFeedbackWarning("lat","Coordinates do not seem to fall within chosen LFA! Please check!")
+                lfa.pass <- F
               }
           }
+            ## if passed LFA test, then check grid
+            if(lfa.pass && !lon %in% c(NULL,NA) && !lat %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") && !input$grid_num %in% c(NULL,NA)){
+              chose.grid <- gridpolys %>% filter(LFA %in% input$lfa, GRID_NO %in% input$grid_num)
+              grid.result <- any(st_within(point_sf, chose.grid, sparse = FALSE))
+              if(grid.result %in% FALSE){
+                ## check if the point is very nearby the border before throwing a warning
+                g.dist_m <- st_distance(point_sf, chose.grid)
+                gd <- as.numeric(min(g.dist_m))
+                if(gd>200){ ## 200m allowed margin of error
+                  hideFeedback("lon")
+                  hideFeedback("lat")
+                  showFeedbackWarning("lon","Coordinates do not seem to fall within chosen Grid! Please check!")
+                  showFeedbackWarning("lat","Coordinates do not seem to fall within chosen Grid! Please check!")
+                }
+              }
+            }
         }
       }
     }
@@ -1609,7 +1633,18 @@ suppressWarnings({
 
 
 ## 17 Grid No
-## 17:1 Grid number should fall within selecte LFA
+## 17:1 range (Grid number should fall within selected LFA)
+  observeEvent(input$grid_num,{
+    hideFeedback("grid_num")
+    checks$check17 <- T
+    if(!input$grid_num %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA)){
+      chose.lfa <- gridpolys %>% filter(LFA %in% input$lfa)
+      if(!input$grid_num %in% chose.lfa$GRID_NO){
+        showFeedbackDanger("grid_num","Grid Number is not in the chosen LFA")
+        checks$check17 <- F
+      }
+    }
+  }, ignoreInit = T)
 
 ## 18 Depth (FM)
 ## 18:1 range and warning if > 200 m
