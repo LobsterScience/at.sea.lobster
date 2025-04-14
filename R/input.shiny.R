@@ -589,7 +589,7 @@ suppressWarnings({
         input$set_num,
         set.code.id = NA,
         gear.id = NA,
-        spec.code = 2550,
+        spec.code = "2550",
         input$grid_num,
         est.catch = NA,
         input$num_traps,
