@@ -1938,11 +1938,11 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           showFeedbackDanger("spec_code_row_1","First row must have species code to submit trap")
           checks$check31 <- F
         }else{
-          if((row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
-              input[[paste0("spec_code_row_",row.num-1)]] %in% c(NULL,NA,"")) |
+          if((row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &&
+              input[[paste0("spec_code_row_",row.num-1)]] %in% c(NULL,NA)) |
              (row.num<num.rows &&
-              input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA,"") &&
-              !input[[paste0("spec_code_row_",row.num+1)]] %in% c(NULL,NA,""))
+              input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &&
+              !input[[paste0("spec_code_row_",row.num+1)]] %in% c(NULL,NA))
           ){
             hideFeedback(paste0("spec_code_", row_id))
             showFeedbackDanger(paste0("spec_code_", row_id),"Rows must be filled sequentially!")
