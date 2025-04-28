@@ -350,7 +350,7 @@ fluidRow(
     column(1, selectInput("lfa", "LFA:",choices = c("","L27", "L28","L29","L30","L31A","L31B","L32","L33","L34","L35","L36","L37","L38","L38B","L41")))
   ),
   fluidRow(
-    column(2, textInput("entry_group", "DATA ENTRY GROUP")),
+    column(2, selectInput("entry_group", "DATA ENTRY GROUP", choices= c("","CBFH","DFO","SWLSS"))),
     column(2, textInput("entry_name", "DATA ENTRY NAME")),
     column(2, dateInput("entry_date", "DATA ENTRY DATE")),
     column(2, textInput("trip_code", "TRIP"), style = "pointer-events: none; opacity: 0.5;")
@@ -1500,17 +1500,7 @@ suppressWarnings({
   }, ignoreInit = T)
 
 ## 9 Data Entry Group
-## 9:1  range < 40 characters (violation impossible)
-  observe({
-    runjs('
-      $("#entry_group").on("input", function() {
-        var value = $(this).val();
-        if (value.length > 40) {
-          $(this).val(value.substring(0, 40));  // Limit input to 40 characters
-        }
-      });
-    ')
-  })
+## 9:1  range = Dropdown list (violation impossible)
 
 ## 10 Data Entry Name
 ## 10:1  range < 40 characters (violation impossible)
