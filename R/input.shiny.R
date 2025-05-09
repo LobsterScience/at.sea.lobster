@@ -350,8 +350,8 @@ fluidRow(
     column(1, selectInput("lfa", "LFA:",choices = c("","L27", "L28","L29","L30","L31A","L31B","L32","L33","L34","L35","L36","L37","L38","L38B","L41")))
   ),
   fluidRow(
-    column(2, selectInput("entry_group", "DATA ENTRY GROUP", choices= c("","CBFH","DFO","SWLSS"))),
-    column(2, textInput("entry_name", "DATA ENTRY NAME")),
+    column(2, selectInput("entry_group", "DATA ENTRY GROUP", choices= c("","CBFH","CMM","DFO","ESFPA","GCIFA","SWLSS"))),
+    column(2, textInput("entry_name", "KEY PUNCHER NAME")),
     column(2, dateInput("entry_date", "DATA ENTRY DATE")),
     column(2, textInput("trip_code", "TRIP"), style = "pointer-events: none; opacity: 0.5;")
   ),
