@@ -436,8 +436,12 @@ suppressWarnings({
   ## DATA FILE IMPORTS
   ## bring in species and other code lists so they only have to be uploaded once
   spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
-  crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
-  wsu <- spec.tab[grepl("whelk|starfish|urchin", spec.tab$COMMON, ignore.case = TRUE), ]
+  ## remove code 2553 code for berried lobster (rdundan and potentially confusing)
+  spec.tab <- spec.tab %>% filter(!SPECIES_CODE %in% 2553)
+  #crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
+  crust.codes <- c(2550,2552,2511,2513,2520,2523,2526,2531)
+  #wsu <- spec.tab[grepl("whelk|starfish|urchin", spec.tab$COMMON, ignore.case = TRUE), ]
+  abund.species <- c(4210,2559,6400,6100,4330,2100,4321,8520)
   code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
   condition <- readRDS(paste0(system.file("data", package = "Bycatch"), "/condition.rds"))
   lfa.data <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAdata.rds"))
@@ -1157,6 +1161,15 @@ suppressWarnings({
         }
         ## if non-lobster value entered
         if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+
+          ## if it's still a crustacean, grey out abundance
+          if(input[[paste0("spec_code_", row_id)]] %in% crust.codes){
+            updateNumericInput(session, paste0("abund_", row_id), value = NA)
+            shinyjs::disable(paste0("abund_", row_id))
+          }else{ ## is not a crustacean
+            shinyjs::enable(paste0("abund_", row_id))
+          }
+
           shinyjs::disable(paste0("egg_", row_id))
           shinyjs::disable(paste0("vnotch_", row_id))
           shinyjs::disable(paste0("clutch_", row_id))
@@ -1189,12 +1202,27 @@ suppressWarnings({
               hideFeedback(paste0("kept_", row_id))
             })
           }else{
-            shinyjs::enable(paste0("length_", row_id))
-            shinyjs::enable(paste0("sex_", row_id))
-            shinyjs::enable(paste0("cond_", row_id))
-            shinyjs::enable(paste0("kept_", row_id))
+
+            ## if it's in the abundance only species
+            if(input[[paste0("spec_code_", row_id)]] %in% abund.species){
+              updateNumericInput(session, paste0("length_", row_id), value = NA)
+              updateNumericInput(session, paste0("sex_", row_id), value = NA)
+              updateNumericInput(session, paste0("condition_", row_id), value = NA)
+              shinyjs::disable(paste0("length_", row_id))
+              shinyjs::disable(paste0("sex_", row_id))
+              shinyjs::disable(paste0("cond_", row_id))
+              shinyjs::enable(paste0("kept_", row_id))
+            }else{ ## not in the adundance only species
+              shinyjs::enable(paste0("length_", row_id))
+              shinyjs::enable(paste0("sex_", row_id))
+              shinyjs::enable(paste0("cond_", row_id))
+              shinyjs::enable(paste0("kept_", row_id))
+            }
           }
-        }else{
+        }else{ ## is a lobster
+          updateNumericInput(session, paste0("abund_", row_id), value = NA)
+          shinyjs::disable(paste0("abund_", row_id))
+
            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
           shinyjs::disable(paste0("egg_", row_id))
           shinyjs::disable(paste0("vnotch_", row_id))
@@ -1205,6 +1233,7 @@ suppressWarnings({
           shinyjs::enable(paste0("shell_", row_id))
           shinyjs::enable(paste0("cull_", row_id))
           shinyjs::enable(paste0("disease_", row_id))
+          updateNumericInput(session, paste0("disease_", row_id), value = 0)
         }else{
           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 2){
             shinyjs::enable(paste0("vnotch_", row_id))
@@ -1955,10 +1984,12 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       ## 32:1 No restrictions
 
       ## 33 Length
-      ## 33: 1 length should have a value if there is a species choice (Includes autofill of units cm/mm)
+      ## 33: 1 length should have a value if there is a valid (measurable species) species choice (Includes autofill of units cm/mm)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("length_", row_id)]]),{
         hideFeedback(paste0("length_", row_id))
-        if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("length_", row_id)]] %in% c(NA,NULL)){
+        if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &
+           !input[[paste0("spec_code_", row_id)]] %in% abund.species &
+           input[[paste0("length_", row_id)]] %in% c(NA,NULL)){
           showFeedbackWarning(paste0("length_", row_id), "Missing Value!")
         }else{
           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2551,2552)){
@@ -1989,12 +2020,12 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           ### Autofill Sex descriptions
               sex <-code.tab$Name[which(code.tab$Field %in% "Sex" & code.tab$Code %in% input[[paste0("sex_", row_id)]])]
               showFeedback(paste0("sex_", row_id), sex)
-          if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA) & !input[[paste0("spec_code_", row_id)]] %in% crustaceans$SPECIES_CODE){
+          if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA) & !input[[paste0("spec_code_", row_id)]] %in% crust.codes){
             hideFeedback(paste0("sex_", row_id))
             showFeedbackWarning(paste0("sex_", row_id), "Sex codes are for crustaceans only")
           }
           ## 34:2 should have a value if species is crustacean
-          if(input[[paste0("spec_code_", row_id)]] %in% crustaceans$SPECIES_CODE & input[[paste0("sex_", row_id)]] %in% c(NULL,NA)){
+          if(input[[paste0("spec_code_", row_id)]] %in% crust.codes & input[[paste0("sex_", row_id)]] %in% c(NULL,NA)){
             hideFeedback(paste0("sex_", row_id))
             showFeedbackWarning(paste0("sex_", row_id), "Missing Value!")
           }
@@ -2040,7 +2071,7 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
 
       ## 36  Condition
-      ## 36 : 1 range 0:7 and warning if using fish codes for lobster or vice versa (includes description autofilling)
+      ## 36 : 1 range 0:7 and warning if using fish codes for crustacean or vice versa (includes description autofilling)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("cond_", row_id)]]),{
         hideFeedback(paste0("cond_", row_id))
         if(!input[[paste0("cond_", row_id)]] %in% c(NULL,NA) & (input[[paste0("cond_", row_id)]]<0 | input[[paste0("cond_", row_id)]]>7)){
@@ -2048,20 +2079,22 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           checks$check36 <- F
         }else{
           checks$check36 <- T
-          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
+          if(input[[paste0("spec_code_", row_id)]] %in% crust.codes & !input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
             c <- condition$lob_cond[which(condition$code %in% input[[paste0("cond_", row_id)]])]
-            if(c %in% NA){showFeedbackWarning(paste0("cond_", row_id), "This is not a lobster code")}else{
+            if(c %in% NA){showFeedbackWarning(paste0("cond_", row_id), "This is not a crustacean code")}else{
               showFeedback(paste0("cond_", row_id),c)
             }
           }
-          if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
+          if(!input[[paste0("spec_code_", row_id)]] %in% crust.codes & !input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
             c <- condition$fish_cond[which(condition$code %in% input[[paste0("cond_", row_id)]])]
-            if(c %in% NA){showFeedbackWarning(paste0("cond_", row_id), "This is a lobster code")}else{
+            if(c %in% NA){showFeedbackWarning(paste0("cond_", row_id), "This is a crustacean code")}else{
               showFeedback(paste0("cond_", row_id),c)
             }
           }
-          ## 36: 2 should have a value if species is chosen
-          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) & input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
+          ## 36: 2 should have a value if valid (measureable species) species is chosen
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &
+             !input[[paste0("spec_code_", row_id)]] %in% abund.species &
+             input[[paste0("cond_", row_id)]] %in% c(NULL,NA)){
             showFeedbackWarning(paste0("cond_", row_id), "Missing value!")
           }
         }
@@ -2169,7 +2202,7 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
       }, ignoreInit = T)
 
       ## 42 Abundance
-      ## 42:1 Range + Shouldn't be > 1 for anything except whelks, starfish, urchins
+      ## 42:1 Range + Shouldn't be > 1 for anything except whelks, starfish, urchins, shrimp, etc. (non-measureable species)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("abund_", row_id)]]),{
         hideFeedback(paste0("abund_", row_id))
         checks$check42 <- T
@@ -2178,8 +2211,8 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
           checks$check42 <- F
         }else{
           if(!input[[paste0("abund_", row_id)]] %in% c(NULL,NA) & input[[paste0("abund_", row_id)]] > 1 &&
-             !input[[paste0("spec_code_", row_id)]] %in% wsu$SPECIES_CODE){
-            showFeedbackWarning(paste0("abund_", row_id), "Abundance should only be greater than 1 for Whelks, Starfish and Urchins")
+             !input[[paste0("spec_code_", row_id)]] %in% abund.species){
+            showFeedbackWarning(paste0("abund_", row_id), "Abundance should only be greater than 1 for certain 'Non-Measureable' species (Whelk, Hermit Crab, etc)")
           }
         }
         ## 42:2 Cannot be blank if spec code is 9999 (should be 0)
