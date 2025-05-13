@@ -636,23 +636,26 @@ suppressWarnings({
   update.trip <- function(db=NULL, trip.id = NULL){
     checktrip <- paste("SELECT * FROM TRIP_INFO WHERE TRIP_ID = '",trip.id, "'", sep = "")
     trip.result <- dbGetQuery(db, checktrip)
+    bdate <- as.character(input$board_date) ## ensure dates get uplaoded as strings
+    ldate <- as.character(input$land_date)
+    edate <- as.character(input$entry_date)
     if(nrow(trip.result)==0){
       trip.dat <- data.frame(
         trip.id,
         input$trip_code,
         input$entry_group,
         input$vessel_name,
-        input$vessel_num,
-        input$license_num,
+        sprintf("%06d",input$vessel_num), ## ensure leading zeros
+        sprintf("%06d",input$license_num),
         port = NA,
-        input$board_date,
-        input$land_date,
+        bdate,
+        ldate,
         input$sampler_name,
         input$lfa,
         input$captain_name,
         marfis.lic = NA,
         input$entry_name,
-        input$entry_date
+        edate
 
       )
       trip_columns <- dbListFields(db, "TRIP_INFO")
@@ -665,8 +668,8 @@ suppressWarnings({
     UPDATE TRIP_INFO
     SET OWNER_GROUP = '", input$entry_group, "',
         VESSEL_NAME = '", input$vessel_name, "',
-        VESSEL_NO = '", input$vessel_num, "',
-        LICENSE_NO = '", input$license_num, "',
+        VESSEL_NO = '", sprintf("%06d",input$vessel_num), "',
+        LICENSE_NO = '", sprintf("%06d",input$license_num), "',
         BOARD_DATE = '", input$board_date, "',
         LANDING_DATE = '", input$land_date, "',
         SAMPLER_NAME = '", input$sampler_name, "',
@@ -816,7 +819,7 @@ suppressWarnings({
         vrn <- sprintf("%06d",input$vessel_num) ## ensures that the vessel number in TRIP always has 6 digits
         updateTextInput(session, "trip_code", value = paste0(vrn,"-",board.date))
         ## set relational column
-        TRIP.ID <- paste0(input$vessel_num,"_",board.date)
+        TRIP.ID <- paste0(vrn,"_",board.date)
         trip.id(TRIP.ID)
   }, ignoreInit = TRUE)
 
