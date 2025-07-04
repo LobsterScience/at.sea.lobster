@@ -1258,7 +1258,7 @@ suppressWarnings({
             if(input[[paste0("spec_code_", row_id)]] %in% abund.species){
               updateNumericInput(session, paste0("length_", row_id), value = NA)
               updateNumericInput(session, paste0("sex_", row_id), value = NA)
-              updateNumericInput(session, paste0("condition_", row_id), value = NA)
+              updateNumericInput(session, paste0("cond_", row_id), value = NA)
               shinyjs::disable(paste0("length_", row_id))
               shinyjs::disable(paste0("sex_", row_id))
               shinyjs::disable(paste0("cond_", row_id))
@@ -2007,15 +2007,17 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
         checks$check31 <- T
         row.num <- as.numeric(gsub("\\D", "", row_id))
         num.rows <- max(as.numeric(gsub("\\D", "", current_rows)))
+        spec_minus_1 <- input[[paste0("spec_code_row_", row.num - 1)]]
+        spec_plus_1  <- input[[paste0("spec_code_row_", row.num + 1)]]
         if(input$spec_code_row_1 %in% c(NULL,NA) && !input$bait_code  %in% c(NULL,NA)){
           showFeedbackDanger("spec_code_row_1","First row must have species code to submit trap")
           checks$check31 <- F
         }else{
-          if((row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &&
-              input[[paste0("spec_code_row_",row.num-1)]] %in% c(NULL,NA)) |
-             (row.num<num.rows &&
-              input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &&
-              !input[[paste0("spec_code_row_",row.num+1)]] %in% c(NULL,NA))
+          if(!is.null(spec_minus_1) && !is.null(spec_plus_1)){
+          if((is.numeric(row.num) && row.num>1 && !input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &&
+              spec_minus_1 %in% c(NULL,NA)) ||
+             (is.numeric(row.num) && is.numeric(num.rows) && row.num<num.rows && input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) &&
+              !spec_plus_1 %in% c(NULL,NA))
           ){
             hideFeedback(paste0("spec_code_", row_id))
             showFeedbackDanger(paste0("spec_code_", row_id),"Rows must be filled sequentially!")
@@ -2035,6 +2037,7 @@ observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
                 showFeedbackWarning(paste0("spec_code_", row_id),"Warning! This code is not on the list of known species!")
               }
             }
+          }
           }
         }
       })
