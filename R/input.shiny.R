@@ -448,12 +448,12 @@ suppressWarnings({
   ## Spatial files
   lfapolys <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAPolysSF.rds"))
   lfapolys$LFA <- paste0("L",lfapolys$LFA)
-  lfapolys <- lfapolys %>% mutate(LFA <- ifelse(LFA %in% "L311","L31A",
+  lfapolys <- lfapolys %>% mutate(LFA = ifelse(LFA %in% "L311","L31A",
                                                 ifelse(LFA %in% "L312","L31B",
                                                        LFA)))
   gridpolys <- readRDS(paste0(system.file("data", package = "Bycatch"), "/GridPolysSF.rds"))
   gridpolys$LFA <- paste0("L",gridpolys$LFA)
-  gridpolys <- gridpolys %>% mutate(LFA <- ifelse(LFA %in% "L311","L31A",
+  gridpolys <- gridpolys %>% mutate(LFA = ifelse(LFA %in% "L311","L31A",
                                                 ifelse(LFA %in% "L312","L31B",
                                                        LFA)))
 
@@ -543,7 +543,7 @@ suppressWarnings({
 
   ### TRAP (Insert if the trap hasn't been created yet)
   update.trap <- function(db=NULL, set.id = NULL, trap.id = NULL){
-    if(!is.na(input$bait_code)){  ## don't upload blank traps
+    #if(!is.na(input$bait_code)){  ## don't upload blank traps (curently redudant)
     checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     trap.result <- dbGetQuery(db, checktrap)
     if(nrow(trap.result)==0){
@@ -579,7 +579,7 @@ suppressWarnings({
       dbExecute(db, update_query)
     }
     print("Trap table updated")
-    }
+   # }
   }
 
   ### SET (Insert if the set hasn't been created yet)
@@ -1354,8 +1354,10 @@ suppressWarnings({
             ## Update upstream and downstream data
             update.trip(db, trip.id)
             update.set(db, trip.id = trip.id, set.id = set.id)  ###  ^^ upstream
-            update.trap(db,set.id = set.id, trap.id = trap.id)  ###  vv downstream
-            update.fish(db, trap.id = trap.id)
+            if(!is.na(input$bait_code) && !is.null(input$bait_code)){ ## don't upload blank traps
+              update.trap(db,set.id = set.id, trap.id = trap.id)  ###  vv downstream
+              update.fish(db, trap.id = trap.id)
+            }
 
             dbDisconnect(db)
 
@@ -1423,9 +1425,11 @@ suppressWarnings({
         update.trip(db, trip.id)
         ## Update downstream data
         update.set(db, trip.id = trip.id, set.id = set.id)
-        if(!is.null(trap.id)){
-          update.trap(db,set.id = set.id, trap.id = trap.id)
-          update.fish(db, trap.id = trap.id)
+        if(!is.null(trap.id)){         ## vv downstream
+          if(!is.na(input$bait_code) && !is.null(input$bait_code)){ ## don't upload blank traps
+            update.trap(db,set.id = set.id, trap.id = trap.id)
+            update.fish(db, trap.id = trap.id)
+          }
         }
 
         dbDisconnect(db)
@@ -1577,7 +1581,7 @@ suppressWarnings({
     }else{
       hideFeedback("lfa")
     }
-  }, ignoreInit = T)
+  })
 
 ## 9 Data Entry Group
 ## 9:1  range = Dropdown list (violation impossible)
@@ -1736,10 +1740,10 @@ suppressWarnings({
 
 ## 17 Grid No
 ## 17:1 range (Grid number should fall within selected LFA)
-  observeEvent(input$grid_num,{
+  observeEvent(list(input$grid_num,input$lfa),{
     hideFeedback("grid_num")
     checks$check17 <- T
-    if(!input$grid_num %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA)){
+    if(!input$grid_num %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"")){
       chose.lfa <- gridpolys %>% filter(LFA %in% input$lfa)
       if(!input$grid_num %in% chose.lfa$GRID_NO){
         showFeedbackDanger("grid_num","Grid Number is not in the chosen LFA")
@@ -1838,7 +1842,7 @@ observe({
 
 
 ## 23 Trap No
-## 23:1 range >=0 (Violation impossible) and must have value if downstream fields have values (can rely on bait cd and spec code)
+## 23:1 range >=0 (Violation impossible) and < #traps in set. And must have value if downstream fields have values (can rely on bait cd and spec code)
 observe({
   runjs('
     $("#trap_num").on("input", function() {
@@ -1849,13 +1853,19 @@ observe({
     });
   ')
 })
-observeEvent(list(input$trap_num,input$bait_code,input$spec_code_row_1),{
+observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code_row_1),{
+  hideFeedback("trap_num")
+  checks$check23 <- T
   if(is.na(input$trap_num) & (!input$bait_code %in% c(NULL,NA,"") | !input$spec_code_row_1 %in% c(NULL,NA,""))){
     showFeedbackDanger("trap_num", "Error: No Trap Number Selected")
     checks$check23 <- F
   }else{
-    hideFeedback("trap_num")
-    checks$check23 <- T
+    if(!input$trap_num %in% c(NULL,NA) && !input$num_traps %in% c(NULL,NA)){
+      if(input$trap_num>input$num_traps){
+        showFeedbackDanger("trap_num", "Error: Trap number is higher than #Traps in Set")
+        checks$check23 <- F
+      }
+    }
   }
 }, ignoreInit = T)
 
