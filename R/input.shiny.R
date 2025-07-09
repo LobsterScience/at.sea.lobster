@@ -350,7 +350,7 @@ fluidRow(
     column(1, selectInput("lfa", "LFA:",choices = c("","L27", "L28","L29","L30","L31A","L31B","L32","L33","L34","L35","L36","L37","L38","L38B","L41")))
   ),
   fluidRow(
-    column(2, selectInput("entry_group", "DATA ENTRY GROUP", choices= c("","CBFH","CMM","DFO","ESFPA","GCIFA","SWLSS"))),
+    column(2, selectInput("entry_group", "DATA ENTRY GROUP", choices= c("","CBFH","CMM","DFO","ESFPA","GCIFA","RCIFA","SWLSS"))),
     column(2, textInput("entry_name", "KEY PUNCHER NAME")),
     column(2, dateInput("entry_date", "DATA ENTRY DATE")),
     column(2, textInput("trip_code", "TRIP"), style = "pointer-events: none; opacity: 0.5;")
@@ -823,7 +823,7 @@ suppressWarnings({
         trip.id(TRIP.ID)
   }, ignoreInit = TRUE)
 
-  ## then, whenever trip code changes, begin set # at 1 (or clear if trip code is cleared)
+  ## then, whenever trip code changes, first autofill trip info if trip is found
   observeEvent(input$trip_code, {
     if(input$trip_code %in% ""){
       ## use delay and change from different value to trigger reset of downstream values
@@ -831,7 +831,57 @@ suppressWarnings({
       delay(5,{
         updateNumericInput(session, "set_num", value = NA)
       })
+
+      # Clear input fields for trip INFO
+      # updateDateInput(session, "land_date", value = NA)
+      updateTextInput(session, "vessel_name", value = "")
+      updateNumericInput(session, "license_num", value = NA)
+      updateTextInput(session, "captain_name", value = "")
+      updateTextInput(session, "sampler_name", value = "")
+      updateSelectInput(session, "lfa", selected = "")
+      updateSelectInput(session, "entry_group", selected = "")
+      updateTextInput(session, "entry_name", value = NA)
+      suppressWarnings(updateDateInput(session, "entry_date", value = NA))
+
     }else{
+      new.trip <- trip.id()
+      if(!is.null(new.trip)){
+        # check database for existing set
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+        checktrip <- paste("SELECT * FROM TRIP_INFO WHERE TRIP_ID = '",new.trip, "'", sep = "")
+        trip.result <- dbGetQuery(db, checktrip)
+        dbDisconnect(db)
+
+        if(nrow(trip.result)==0){
+          # Clear input fields for trip INFO
+         # updateDateInput(session, "land_date", value = NA)
+          updateTextInput(session, "vessel_name", value = "")
+          updateNumericInput(session, "license_num", value = NA)
+          updateTextInput(session, "captain_name", value = "")
+          updateTextInput(session, "sampler_name", value = "")
+          updateSelectInput(session, "lfa", selected = "")
+          updateSelectInput(session, "entry_group", selected = "")
+          updateTextInput(session, "entry_name", value = NA)
+          suppressWarnings(updateDateInput(session, "entry_date", value = NA))
+
+
+        }else{
+          ## if there is data for current trip, fill fields
+          suppressWarnings( updateDateInput(session, "land_date", value = as.Date(trip.result$LANDING_DATE)))
+          updateTextInput(session, "vessel_name", value = trip.result$VESSEL_NAME)
+          updateNumericInput(session, "license_num", value = trip.result$LICENSE_NO)
+          updateTextInput(session, "captain_name", value = trip.result$CAPTAIN)
+          updateTextInput(session, "sampler_name", value = trip.result$SAMPLER_NAME)
+          updateSelectInput(session, "lfa", selected = trip.result$COMAREA_ID)
+          updateSelectInput(session, "entry_group", selected = trip.result$OWNER_GROUP)
+          updateTextInput(session, "entry_name", value = trip.result$CREATED_BY)
+          suppressWarnings(updateDateInput(session, "entry_date", value = as.Date(trip.result$CREATED_DATE)))
+        }
+
+      }
+
+
+      ### then begin set # at 1 (or clear if trip code is cleared)
       updateNumericInput(session, "set_num", value = NA)
       delay(5,{
         updateNumericInput(session, "set_num", value = 1)
@@ -992,7 +1042,7 @@ suppressWarnings({
 
 
         ## fill rows with new data
-        delay(10,{    ## delay is needed for the new row_ids to properly update with the correct number before we try to fill them
+        delay(20,{    ## delay is needed for the new row_ids to properly update with the correct number before we try to fill them
           row.ids.vect <- row_ids()
           for (i in 1:nrow(fish.result)) {
             new.row <- row.ids.vect[i]
@@ -1049,7 +1099,7 @@ suppressWarnings({
   ##  Autofill Update each row's trap.num field with the current input$trap_num value
   observeEvent(list(input$trap_num, row_ids()), {
     req(input$trap_num) # Ensure trap.num has a value
-    delay(1, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
+    delay(5, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
       current_rows <- row_ids()
       lapply(current_rows, function(row_id) {
         updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)
@@ -1199,7 +1249,7 @@ suppressWarnings({
             updateNumericInput(session, paste0("cond_", "row_1"), value = NA)
             updateNumericInput(session, paste0("kept_", "row_1"), value = NA)
             ## also clear any warnings/messages (use delay to out-wait warnings generated anywhere else)
-            delay(100,{
+            delay(5,{
               hideFeedback(paste0("length_", "row_1"))
               hideFeedback(paste0("sex_", "row_1"))
               hideFeedback(paste0("cond_", "row_1"))
@@ -1478,25 +1528,28 @@ suppressWarnings({
 ## 1 Boarding Date
 ## 1:1 No future dates
   observeEvent(input$board_date,{
+    hideFeedback("board_date")
+    checks$check1 <- T
+    req(input$board_date)
     if(input$board_date > Sys.Date()){
       showFeedbackDanger("board_date", "Dates can't be in the future!")
       checks$check1 <- F
-    }else {
-      hideFeedback("board_date")
-      checks$check1 <- T
     }
   },ignoreInit = T)
 
 ## 2 Landing Date
 ## 2:1 No future dates
   observeEvent(input$land_date,{
-    if(input$land_date > Sys.Date()){
-      showFeedbackDanger("land_date", "Dates can't be in the future!")
-      checks$check2 <- F
-    }else {
-      hideFeedback("land_date")
-      checks$check2 <- T
+    hideFeedback("land_date")
+    checks$check2 <- T
+    req(input$land_date)
+    if(!is.null(input$land_date) && !is.na(input$land_date)){
+      if(input$land_date > Sys.Date()){
+        showFeedbackDanger("land_date", "Dates can't be in the future!")
+        checks$check2 <- F
+      }
     }
+
   },ignoreInit = T)
 
 
