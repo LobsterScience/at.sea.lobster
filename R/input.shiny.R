@@ -748,6 +748,10 @@ suppressWarnings({
   # Reactive values to store row data
   row_data <- reactiveValues(data = list())
 
+  ## reactive value for fish table every time new fish data is retrieved from the database (to activate filling in of GUI rows)
+  new.fish.data <- reactiveVal(NULL)
+  rerun.fish <- reactiveVal(0)  ## for looping to check if fish row number is right before filling with data
+  suppress_spec_fill <- reactiveVal(FALSE) ## for inactivating other observe blocks while fish rows are filling from data
 
   # Template for a fish row
   create_row <- function(row_id) {
@@ -966,6 +970,7 @@ suppressWarnings({
       dbDisconnect(db)
 
       if(nrow(trap.result)==0){ ### if there's no pre-existing data for the new trap selection, clear all fields
+        new.fish.data(NULL) ## and reset fish.data
         # Clear input fields for Trap and Fish INFO
         updateNumericInput(session, "bait_code", value = NA)
         updateNumericInput(session, "bait_code2", value = NA)
@@ -991,6 +996,7 @@ suppressWarnings({
           updateNumericInput(session, paste0("cull_",row_id), value = NA)
         }
       }else{
+
         ### if there is pre-existing data for trap selection:
         ## fill data for selected trap
         updateNumericInput(session, "bait_code", value = trap.result$BAIT_CD[1])
@@ -1006,6 +1012,8 @@ suppressWarnings({
         fish.result <- dbGetQuery(db, existing.fish)
         dbDisconnect(db)
         fish.result <- fish.result %>% arrange(FISH_NO)  ## ensures that fish rows are sorted by fish number, so these can be treated equivalent to GUI row number
+        ## update the reactive table for use later
+        new.fish.data(fish.result)
 
         ## Determine number of rows needed
         num_fish_rows <- nrow(fish.result)
@@ -1041,27 +1049,6 @@ suppressWarnings({
         })
 
 
-        ## fill rows with new data
-        delay(20,{    ## delay is needed for the new row_ids to properly update with the correct number before we try to fill them
-          row.ids.vect <- row_ids()
-          for (i in 1:nrow(fish.result)) {
-            new.row <- row.ids.vect[i]
-            ##updateNumericInput(session, paste0("trap_num_", new.row), value = input$trap_num)
-            updateNumericInput(session, paste0("spec_code_", new.row), value = fish.result$SPECCD_ID[i])
-            updateTextInput(session, paste0("common_", new.row), value = fish.result$COMMON[i])
-            updateNumericInput(session, paste0("length_", new.row), value = fish.result$FISH_LENGTH[i])
-            updateNumericInput(session, paste0("sex_", new.row), value = fish.result$SEXCD_ID[i])
-            updateNumericInput(session, paste0("shell_", new.row), value = fish.result$SHELL[i])
-            updateNumericInput(session, paste0("cond_", new.row), value = fish.result$CONDITION[i])
-            updateNumericInput(session, paste0("disease_", new.row), value = fish.result$DISEASE[i])
-            updateNumericInput(session, paste0("egg_", new.row), value = fish.result$EGG_STAGE[i])
-            updateNumericInput(session, paste0("clutch_", new.row), value = fish.result$CLUTCH[i])
-            updateNumericInput(session, paste0("vnotch_", new.row), value = fish.result$VNOTCH[i])
-            updateNumericInput(session, paste0("kept_", new.row), value = fish.result$KEPT[i])
-            updateNumericInput(session, paste0("abund_", new.row), value = fish.result$ABUNDANCE[i])
-            updateNumericInput(session, paste0("cull_", new.row), value = fish.result$CULLS[i])
-          }
-        })
       }
     }
 
@@ -1091,6 +1078,46 @@ suppressWarnings({
         updateNumericInput(session, paste0("abund_",row_id), value = NA)
         updateNumericInput(session, paste0("cull_",row_id), value = NA)
       }
+    }
+
+  }, ignoreInit = TRUE)
+
+  ## Once all necessary fish rows are built to match found fish data, fill rows with new data
+
+  observeEvent(list(new.fish.data(),rerun.fish()),{
+    suppress_spec_fill(TRUE) ## suppress any autofilling action while data is being retrieved
+    req(rerun.fish())
+    req(new.fish.data())
+    req(input$trap_num)
+    req(row_ids())
+    if(length(row_ids()) >= nrow(new.fish.data())){
+    row.ids.vect <- row_ids()
+    fish.dat <- new.fish.data()
+    delay(10,{   ### delay needed to make sure GUI finishes generating rows before trying to fill
+    for (i in 1:nrow(fish.dat)) {
+      new.row <- row.ids.vect[i]
+      ##updateNumericInput(session, paste0("trap_num_", new.row), value = input$trap_num)
+      updateNumericInput(session, paste0("spec_code_", new.row), value = fish.dat$SPECCD_ID[i])
+      updateTextInput(session, paste0("common_", new.row), value = fish.dat$COMMON[i])
+      updateNumericInput(session, paste0("length_", new.row), value = fish.dat$FISH_LENGTH[i])
+      updateNumericInput(session, paste0("sex_", new.row), value = fish.dat$SEXCD_ID[i])
+      updateNumericInput(session, paste0("shell_", new.row), value = fish.dat$SHELL[i])
+      updateNumericInput(session, paste0("cond_", new.row), value = fish.dat$CONDITION[i])
+      updateNumericInput(session, paste0("disease_", new.row), value = fish.dat$DISEASE[i])
+      updateNumericInput(session, paste0("egg_", new.row), value = fish.dat$EGG_STAGE[i])
+      updateNumericInput(session, paste0("clutch_", new.row), value = fish.dat$CLUTCH[i])
+      updateNumericInput(session, paste0("vnotch_", new.row), value = fish.dat$VNOTCH[i])
+      updateNumericInput(session, paste0("kept_", new.row), value = fish.dat$KEPT[i])
+      updateNumericInput(session, paste0("abund_", new.row), value = fish.dat$ABUNDANCE[i])
+      updateNumericInput(session, paste0("cull_", new.row), value = fish.dat$CULLS[i])
+      delay(3000,{  ### suppress autofilling action until well after the data is retrieved
+        suppress_spec_fill(FALSE)
+      })
+    }
+    })
+
+    }else{
+      rerun.fish(rerun.fish()+1)
     }
 
   }, ignoreInit = TRUE)
@@ -1190,6 +1217,7 @@ suppressWarnings({
 
   ## also continually observe catch spec code input to auto-fill common name
   observe({
+    req(!suppress_spec_fill())
     current_rows <- row_ids()
     # Create an observer for each spec.code field
     lapply(current_rows, function(row_id) {
