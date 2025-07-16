@@ -1013,7 +1013,7 @@ suppressWarnings({
         existing.fish <-  paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
         fish.result <- dbGetQuery(db, existing.fish)
         dbDisconnect(db)
-        fish.result <- fish.result %>% arrange(FISH_NO)  ## ensures that fish rows are sorted by fish number, so these can be treated equivalent to GUI row number
+        fish.result <- fish.result %>% arrange(as.numeric(FISH_NO))  ## ensures that fish rows are sorted by fish number, so these can be treated equivalent to GUI row number
         ## update the reactive table for use later
         new.fish.data(fish.result)
 
