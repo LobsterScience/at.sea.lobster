@@ -687,7 +687,7 @@ suppressWarnings({
   ###### END OF DB UPDATING FUNCTIONS
 
   ###########################################################################################################################################
-  ### AUTOFILLS and INITIAL CONDITIONS
+  ### INITIAL CONDITIONS and AUTOFILLS
 
   ## INITIAL CONDITIONS ######################
 
@@ -979,6 +979,8 @@ suppressWarnings({
         updateNumericInput(session, "bait_type2", value = NA)
         updateNumericInput(session, "bait_type3", value = NA)
 
+###### FISH row Autofilling begins here
+
         for (row_id in row_ids()) {
           ##updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)  ## we have a seperate continuous observer for fish row trap number
           updateNumericInput(session, paste0("spec_code_", row_id), value = NA)
@@ -1030,7 +1032,7 @@ suppressWarnings({
           }
         }
 
-        ## Clear row data from previous trap
+        ## Clear fish row data from previous trap
         lapply(row_ids(), function(row_id) {
           #updateNumericInput(session, paste0("trap_num_", row_id), value = NA)
           updateNumericInput(session, paste0("spec_code_", row_id), value = NA)
@@ -1085,12 +1087,12 @@ suppressWarnings({
   ## Once all necessary fish rows are built to match found fish data, fill rows with new data
 
   observeEvent(list(new.fish.data(),rerun.fish()),{
-    suppress_spec_fill(TRUE) ## suppress any autofilling action while data is being retrieved
     req(rerun.fish())
     req(new.fish.data())
     req(input$trap_num)
     req(row_ids())
     if(length(row_ids()) >= nrow(new.fish.data())){
+      suppress_spec_fill(TRUE) ## suppress any autofilling action while data is being retrieved
     row.ids.vect <- row_ids()
     fish.dat <- new.fish.data()
     delay(10,{   ### delay needed to make sure GUI finishes generating rows before trying to fill
@@ -1110,7 +1112,7 @@ suppressWarnings({
       updateNumericInput(session, paste0("kept_", new.row), value = fish.dat$KEPT[i])
       updateNumericInput(session, paste0("abund_", new.row), value = fish.dat$ABUNDANCE[i])
       updateNumericInput(session, paste0("cull_", new.row), value = fish.dat$CULLS[i])
-      delay(3000,{  ### suppress autofilling action until well after the data is retrieved
+      delay(2000,{  ### suppress autofilling action until well after the data is retrieved
         suppress_spec_fill(FALSE)
       })
     }
@@ -1123,7 +1125,8 @@ suppressWarnings({
   }, ignoreInit = TRUE)
 
 
-  ##  Autofill Update each row's trap.num field with the current input$trap_num value
+
+  ##  Autofill Update each fish row's trap.num field with the current input$trap_num value
   observeEvent(list(input$trap_num, row_ids()), {
     req(input$trap_num) # Ensure trap.num has a value
     delay(5, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
@@ -1215,13 +1218,107 @@ suppressWarnings({
     }
   })
 
-  ## also continually observe catch spec code input to auto-fill common name
+  ## grey-outs function (contains rules for greying out fields by species, sex)
+  greyouts <- function(row_id = NULL){
+  ##reset all fields
+  shinyjs::enable(paste0("spec_code_", row_id) )
+  shinyjs::enable(paste0("common_", row_id) )
+  shinyjs::enable(paste0("length_", row_id) )
+  shinyjs::enable(paste0("sex_", row_id) )
+  shinyjs::enable(paste0("shell_", row_id) )
+  shinyjs::enable(paste0("cond_", row_id) )
+  shinyjs::enable(paste0("disease_", row_id) )
+  shinyjs::enable(paste0("egg_", row_id) )
+  shinyjs::enable(paste0("clutch_", row_id) )
+  shinyjs::enable(paste0("vnotch_", row_id) )
+  shinyjs::enable(paste0("kept_", row_id) )
+  shinyjs::enable(paste0("abund_", row_id) )
+  shinyjs::enable(paste0("cull_", row_id) )
+
+  ### fish type options
+  ## 1. Crustacean (not lobster)
+  ## 2. Lobster
+  ## 3. abundance only species
+  ## 4. Other fish
+  ## 5. Empty Trap (9999)
+
+  ## if species ia crustacean
+  if(input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+    shinyjs::disable(paste0("shell_", row_id))
+    shinyjs::disable(paste0("disease_", row_id))
+    shinyjs::disable(paste0("egg_", row_id))
+    shinyjs::disable(paste0("clutch_", row_id))
+    shinyjs::disable(paste0("vnotch_", row_id))
+    shinyjs::disable(paste0("abund_", row_id))
+    shinyjs::disable(paste0("cull_", row_id))
+  } ## Crustacean
+
+  ## if species is lobster
+  if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+    shinyjs::disable(paste0("abund_", row_id))
+    if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
+      shinyjs::disable(paste0("egg_", row_id))
+      shinyjs::disable(paste0("clutch_", row_id))
+      shinyjs::disable(paste0("vnotch_", row_id))
+    }else{
+      if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 2){
+        shinyjs::disable(paste0("egg_", row_id))
+        shinyjs::disable(paste0("clutch_", row_id))
+      }
+    }
+  } ## species is lobster
+
+  ## if species is abundance only species
+  if(input[[paste0("spec_code_", row_id)]] %in% abund.species){
+    shinyjs::disable(paste0("length_", row_id) )
+    shinyjs::disable(paste0("sex_", row_id) )
+    shinyjs::disable(paste0("shell_", row_id) )
+    shinyjs::disable(paste0("cond_", row_id) )
+    shinyjs::disable(paste0("disease_", row_id) )
+    shinyjs::disable(paste0("egg_", row_id) )
+    shinyjs::disable(paste0("clutch_", row_id) )
+    shinyjs::disable(paste0("vnotch_", row_id) )
+    shinyjs::disable(paste0("cull_", row_id) )
+  } ##species is abundance only
+
+
+  ## If species is Other Fish
+  if(!input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+    shinyjs::disable(paste0("shell_", row_id))
+    shinyjs::disable(paste0("disease_", row_id))
+    shinyjs::disable(paste0("egg_", row_id))
+    shinyjs::disable(paste0("clutch_", row_id))
+    shinyjs::disable(paste0("vnotch_", row_id))
+    shinyjs::disable(paste0("cull_", row_id))
+
+  } ## Other fish
+
+  ## Empty Trap (9999)
+  if(input[[paste0("spec_code_", "row_1")]] %in% 9999){
+    shinyjs::disable(paste0("length_", row_id) )
+    shinyjs::disable(paste0("sex_", row_id) )
+    shinyjs::disable(paste0("shell_", row_id) )
+    shinyjs::disable(paste0("cond_", row_id) )
+    shinyjs::disable(paste0("disease_", row_id) )
+    shinyjs::disable(paste0("egg_", row_id) )
+    shinyjs::disable(paste0("clutch_", row_id) )
+    shinyjs::disable(paste0("vnotch_", row_id) )
+    shinyjs::disable(paste0("kept_", row_id) )
+    shinyjs::disable(paste0("cull_", row_id) )
+  }
+
+  }
+
+  ### Automated fill and greyout responses for FISH fields:
+
+  ## continually observe catch spec code input to auto-fill common name
   observe({
-    req(!suppress_spec_fill())
+    #req(!suppress_spec_fill())  ## most of below code should only work for manual filling of rows (shouldnt be triggered at all by imported data filling, except for greyouts)
     current_rows <- row_ids()
     # Create an observer for each spec.code field
     lapply(current_rows, function(row_id) {
       observeEvent(input[[paste0("spec_code_", row_id)]], {
+        req(!suppress_spec_fill()) ## don't do anything if change is result of a data import
         # Get the updated value
         new_spec <- input[[paste0("spec_code_", row_id)]]
         ### reference species list to auto fill common name
@@ -1229,9 +1326,12 @@ suppressWarnings({
         updateTextInput(session, paste0("common_", row_id), value = common)
 
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
-      ### AND
+      ###
       ## control contextual restrictions to fish row field usage (which fields can be used for what species/sex selections etc.)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]]),{
+        ## Activate greyouts function to grey disabled fields (even if all other autofilling is suppressed)
+        greyouts(row_id)
+        req(!suppress_spec_fill()) ## don't do anything else if change is result of a data import
         ## clear all fields if species code becomes empty
         if(input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA)){
           updateNumericInput(session, paste0("length_", row_id), value = NA)
@@ -1243,21 +1343,11 @@ suppressWarnings({
         ## if non-lobster value entered
         if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
 
-          ## if it's still a crustacean, grey out abundance
+          ## if it's still a crustacean, clear abundance
           if(input[[paste0("spec_code_", row_id)]] %in% crust.codes){
             updateNumericInput(session, paste0("abund_", row_id), value = NA)
-            shinyjs::disable(paste0("abund_", row_id))
-          }else{ ## is not a crustacean
-            shinyjs::enable(paste0("abund_", row_id))
           }
 
-          ## non-lobster fields
-          shinyjs::disable(paste0("egg_", row_id))
-          shinyjs::disable(paste0("vnotch_", row_id))
-          shinyjs::disable(paste0("clutch_", row_id))
-          shinyjs::disable(paste0("shell_", row_id))
-          shinyjs::disable(paste0("cull_", row_id))
-          shinyjs::disable(paste0("disease_", row_id))
           ## need to clear any disabled fields if theres already values in them
           updateNumericInput(session, paste0("egg_", row_id), value = NA)
           updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
@@ -1268,10 +1358,6 @@ suppressWarnings({
 
           ### if species is 9999 (empty trap) silence all remaining fields except abundance
           if(input[[paste0("spec_code_", "row_1")]] %in% 9999){
-            shinyjs::disable(paste0("length_", "row_1"))
-            shinyjs::disable(paste0("sex_", "row_1"))
-            shinyjs::disable(paste0("cond_", "row_1"))
-            shinyjs::disable(paste0("kept_", "row_1"))
             updateNumericInput(session, paste0("length_", "row_1"), value = NA)
             updateNumericInput(session, paste0("sex_","row_1"), value = NA)
             updateNumericInput(session, paste0("cond_", "row_1"), value = NA)
@@ -1299,98 +1385,42 @@ suppressWarnings({
                 updateNumericInput(session, paste0("kept_", row_id), value = NA)
                 updateNumericInput(session, paste0("abund_", row_id), value = NA)
                 updateNumericInput(session, paste0("cull_", row_id), value = NA)
-
-                shinyjs::disable(paste0("spec_code_", row_id) )
-                shinyjs::disable(paste0("common_", row_id) )
-                shinyjs::disable(paste0("length_", row_id) )
-                shinyjs::disable(paste0("sex_", row_id) )
-                shinyjs::disable(paste0("shell_", row_id) )
-                shinyjs::disable(paste0("cond_", row_id) )
-                shinyjs::disable(paste0("disease_", row_id) )
-                shinyjs::disable(paste0("egg_", row_id) )
-                shinyjs::disable(paste0("clutch_", row_id) )
-                shinyjs::disable(paste0("vnotch_", row_id) )
-                shinyjs::disable(paste0("kept_", row_id) )
-                shinyjs::disable(paste0("abund_", row_id) )
-                shinyjs::disable(paste0("cull_", row_id) )
               }
-
             })
 
           }else{
-            ## renable all non-lobster rows
-            lapply(row_ids(), function(row_id) {
-              if(!row_id %in% "row_1" ){
-            shinyjs::enable(paste0("spec_code_", row_id) )
-            shinyjs::enable(paste0("common_", row_id) )
-            shinyjs::enable(paste0("length_", row_id) )
-            shinyjs::enable(paste0("sex_", row_id) )
-            shinyjs::enable(paste0("cond_", row_id) )
-            shinyjs::enable(paste0("kept_", row_id) )
-            shinyjs::enable(paste0("abund_", row_id) )
-              }
-            })
-
-
             ## if it's in the abundance only species
             if(input[[paste0("spec_code_", row_id)]] %in% abund.species){
               updateNumericInput(session, paste0("length_", row_id), value = NA)
               updateNumericInput(session, paste0("sex_", row_id), value = NA)
               updateNumericInput(session, paste0("cond_", row_id), value = NA)
-              shinyjs::disable(paste0("length_", row_id))
-              shinyjs::disable(paste0("sex_", row_id))
-              shinyjs::disable(paste0("cond_", row_id))
-              shinyjs::enable(paste0("kept_", row_id))
-            }else{ ## not in the adundance only species
-              shinyjs::enable(paste0("length_", row_id))
-              shinyjs::enable(paste0("sex_", row_id))
-              shinyjs::enable(paste0("cond_", row_id))
-              shinyjs::enable(paste0("kept_", row_id))
             }
           }
         }else{ ## is a lobster
           updateNumericInput(session, paste0("abund_", row_id), value = NA)
-          shinyjs::disable(paste0("abund_", row_id))
 
            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
-          shinyjs::disable(paste0("egg_", row_id))
-          shinyjs::disable(paste0("vnotch_", row_id))
-          shinyjs::disable(paste0("clutch_", row_id))
+
           updateNumericInput(session, paste0("egg_", row_id), value = NA)
           updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
           updateNumericInput(session, paste0("clutch_", row_id), value = NA)
-          shinyjs::enable(paste0("shell_", row_id))
-          shinyjs::enable(paste0("cull_", row_id))
-          shinyjs::enable(paste0("disease_", row_id))
           updateNumericInput(session, paste0("disease_", row_id), value = 0)
         }else{
           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 2){
-            shinyjs::enable(paste0("vnotch_", row_id))
-            shinyjs::disable(paste0("egg_", row_id))
-            shinyjs::disable(paste0("clutch_", row_id))
             updateNumericInput(session, paste0("egg_", row_id), value = NA)
             updateNumericInput(session, paste0("clutch_", row_id), value = NA)
-            shinyjs::enable(paste0("shell_", row_id))
-            shinyjs::enable(paste0("cull_", row_id))
-            shinyjs::enable(paste0("disease_", row_id))
-          }else{
-            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 3){
-              shinyjs::enable(paste0("vnotch_", row_id))
-              shinyjs::enable(paste0("egg_", row_id))
-              shinyjs::enable(paste0("clutch_", row_id))
-              shinyjs::enable(paste0("shell_", row_id))
-              shinyjs::enable(paste0("cull_", row_id))
-              shinyjs::enable(paste0("disease_", row_id))
-            }
           }
         }
-       }
-      }, ignoreInit = T)
+        }
 
+      }, ignoreInit = T)
 
     })
 
   })
+
+
+
 ####################################################################################################################################################
 ##BEGINNING OF INTERACTIVE SERVER CODE (BUTTON CLICKS)
   ## SUBMIT LEVEL 1
