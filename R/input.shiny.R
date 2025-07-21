@@ -246,6 +246,26 @@ ui <- fluidPage(
 }
 ")),
 
+
+## Delete info button styling
+tags$style(HTML("
+  .delete-button {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .delete-action-button {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+")),
+
 ## disable mouse scrolling of all numeric fields (too easy to accidentally change value)
 tags$script(HTML("
   $(document).ready(function() {
@@ -359,6 +379,13 @@ fluidRow(
   ################################################## SET INFO
 fluidRow(
   div(
+    class = "delete-button",
+    actionButton("delete_set", "Delete Set", class = "delete-action-button")
+  )
+),
+
+fluidRow(
+  div(
     class = "title-with-button",
     div(class = "title-panel", titlePanel("SET INFO")),  # Wrap the title in title-panel div
     column(12, align = "right",  ### arrow button
@@ -386,6 +413,13 @@ div(class = "compact-row",
   ),
 
  fluidRow(),
+
+fluidRow(
+  div(
+    class = "delete-button",
+    actionButton("delete_trap", "Delete Trap", class = "delete-action-button")
+  )
+),
 
 fluidRow(
   div(
@@ -542,10 +576,12 @@ suppressWarnings({
   }
 
   ### TRAP (Insert if the trap hasn't been created yet)
-  update.trap <- function(db=NULL, set.id = NULL, trap.id = NULL){
+  update.trap <- function(db=NULL, set.id = NULL, trap.id = NULL, delete = FALSE){
+    if(!delete){
     #if(!is.na(input$bait_code)){  ## don't upload blank traps (curently redudant)
     checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     trap.result <- dbGetQuery(db, checktrap)
+
     if(nrow(trap.result)==0){
       trap_columns <- dbListFields(db, "TRAP_INFO")
       t.dat <- data.frame(
@@ -580,10 +616,21 @@ suppressWarnings({
     }
     print("Trap table updated")
    # }
+    }
+
+    if(delete){ ## removes whole row based on trap ID
+      delete_trap_query <- paste0("DELETE FROM TRAP_INFO WHERE TRAP_ID = '", trap.id, "'")
+      dbExecute(db, delete_trap_query)
+      ## Also delete all fish rows for deleted trap
+      delete_fish_query <- paste0("DELETE FROM FISH_INFO WHERE TRAP_ID = '", trap.id, "'")
+      dbExecute(db, delete_fish_query)
+    }
+
   }
 
   ### SET (Insert if the set hasn't been created yet)
-  update.set <- function(db=NULL, trip.id = NULL, set.id = NULL){
+  update.set <- function(db=NULL, trip.id = NULL, set.id = NULL, delete = FALSE){
+    if(!delete){
     checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
     set.result <- dbGetQuery(db, checkset)
     if(nrow(set.result)==0){
@@ -630,6 +677,13 @@ suppressWarnings({
       dbExecute(db, update_query)
     }
     print("Set table updated")
+    }
+
+    if(delete){ ## delete set row from database
+      delete_set_query <- paste0("DELETE FROM SET_INFO WHERE FISHSET_ID = '", set.id, "'")
+      dbExecute(db, delete_set_query)
+    }
+
   }
 
   ### TRIP
@@ -918,7 +972,7 @@ suppressWarnings({
         updateNumericInput(session, "soak_days", value = NA)
         updateNumericInput(session, "vent_size", value = NA)
         updateNumericInput(session, "num_vents", value = NA)
-        updateTextInput(session, "trap_type", value = "")
+        updateNumericInput(session, "trap_type", value = NA)
       }else{
         ## if there is data for current set, fill fields
         updateNumericInput(session, "num_traps", value = set.result$NUM_TRAPS)
@@ -929,7 +983,7 @@ suppressWarnings({
         updateNumericInput(session, "soak_days", value = set.result$SOAK_DAYS)
         updateNumericInput(session, "vent_size", value = set.result$VENT_CD)
         updateNumericInput(session, "num_vents", value = set.result$NUM_VENTS)
-        updateTextInput(session, "trap_type", value = set.result$TRAP_TYPE)
+        updateNumericInput(session, "trap_type", value = set.result$TRAP_TYPE)
       }
 
     }
@@ -1490,6 +1544,62 @@ suppressWarnings({
     # }
   }) ## observeEvent block
 
+  ## When 'Delete Trap' button is clicked (need this option to remove any traps wrongly created)
+  observeEvent(input$delete_trap, {
+    ## define IDs for relational columns
+    set.id <- NULL
+    trap.id <- NULL
+    trip.id <- trip.id()
+    continue = T
+    if(is.null(trip.id)){
+      warning("No TRIP ID Found!")
+      showNotification("No TRIP ID FOUND!", type = "error")
+      continue = F
+    }
+    if(continue){
+      if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){set.id <- paste0(trip.id(),"_",input$set_num)
+      }else{
+        warning("No Set ID Found!")
+        showNotification("No SET ID FOUND!", type = "error")
+        continue = F
+      }
+    }
+    if(continue){
+      if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+      }else{
+        warning("No Trap ID Found!")
+        showNotification("No TRAP ID FOUND!", type = "error")
+        continue = F
+      }
+    }
+
+    if(continue){
+      sure.delete <- dlgMessage(type = "yesno", message = "Are you sure you want to delete all trap information and fish caught for this trap?")
+      if(sure.delete$res %in% "yes"){
+      delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
+        # Initialize database connection
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+        ## delete all trap and fish infor for trap
+        update.trap(db,set.id = set.id, trap.id = trap.id, delete = T)
+
+        dbDisconnect(db)
+
+        ## resetting trap number will clear all downstream fields since set data is now deleted
+        delay(5,{
+          current.trap <- input$trap_num
+          updateNumericInput(session, "trap_num", value = NA)
+          delay(5,{
+            updateNumericInput(session, "trap_num", value = current.trap)
+          })
+        })
+
+      })
+        }
+    }
+
+  }) ## observEvent block (delete)
+
 
   ## SUBMIT LEVEL 2
   ## when "next_set" is clicked
@@ -1557,6 +1667,65 @@ suppressWarnings({
     }
 
   })
+
+  ## When 'Delete Set' button is clicked (Currently works the same as Delete Trap but includes upstream Set data)
+  observeEvent(input$delete_set, {
+    ## define IDs for relational columns
+    set.id <- NULL
+    trap.id <- NULL
+    trip.id <- trip.id()
+    continue = T
+    if(is.null(trip.id)){
+      warning("No TRIP ID Found!")
+      showNotification("No TRIP ID FOUND!", type = "error")
+      continue = F
+    }
+    if(continue){
+      if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){set.id <- paste0(trip.id(),"_",input$set_num)
+      }else{
+        warning("No Set ID Found!")
+        showNotification("No SET ID FOUND!", type = "error")
+        continue = F
+      }
+    }
+    if(continue){
+      if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+      }else{
+        # warning("No Trap ID Found!")
+        # showNotification("No TRAP ID FOUND!", type = "error")
+        # continue = F
+      }
+    }
+
+    if(continue){
+      sure.delete <- dlgMessage(type = "yesno", message = "Are you sure you want to delete all information for this set? All downstream trap and fish data for this set will also be deleted.")
+      if(sure.delete$res %in% "yes"){
+        delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
+          # Initialize database connection
+          db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+
+          ## delete all set, trap and fish infor for trap
+          update.set(db, trip.id = trip.id, set.id = set.id, delete = T)
+          update.trap(db,set.id = set.id, trap.id = trap.id, delete = T)
+
+          dbDisconnect(db)
+
+          ## resetting set number will clear all downstream fields since set data is now deleted
+          delay(5,{
+            current.set <- input$set_num
+            updateNumericInput(session, "set_num", value = NA)
+            delay(5,{
+              updateNumericInput(session, "set_num", value = current.set)
+            })
+          })
+
+        })
+      }
+    }
+
+  }) ## observEvent block (delete)
+
+
 
   ## SUBMIT LEVEL 3
   ### When Trip is submitted
@@ -1866,6 +2035,8 @@ suppressWarnings({
 ## 18 Depth (FM)
 ## 18:1 range and warning if > 200 m
 observeEvent(input$depth,{
+  hideFeedback("depth")
+  checks$check18<- T
   if(!input$depth %in% c(NA,NULL,"") & (input$depth < 0 | input$depth > 300)){
     hideFeedback("depth")
     showFeedbackDanger("depth", "Depth must be between 0 and 300 m")
@@ -1874,11 +2045,7 @@ observeEvent(input$depth,{
     if(!input$depth %in% c(NA,NULL,"") & input$depth>200){
       showFeedbackWarning("depth","Warning: are you sure it was that deep?")
       checks$check18<- T
-    }else{
-      hideFeedback("depth")
-      checks$check18<- T
     }
-
   }
 }, ignoreInit = T)
 
@@ -1973,8 +2140,8 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
   }else{
     if(!input$trap_num %in% c(NULL,NA) && !input$num_traps %in% c(NULL,NA)){
       if(input$trap_num>input$num_traps){
-        showFeedbackDanger("trap_num", "Error: Trap number is higher than #Traps in Set")
-        checks$check23 <- F
+        showFeedbackWarning("trap_num", "Trap number is higher than #Traps in Set")
+        checks$check23 <- T
       }
     }
   }
