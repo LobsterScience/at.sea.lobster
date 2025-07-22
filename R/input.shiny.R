@@ -352,7 +352,7 @@ fluidRow(
   div(
     class = "title-with-button",
     titlePanel("TRIP INFO"),
-    actionButton("submit_trip", "Finished, Close Trip!")
+    actionButton("submit_trip", "Finished for now, Close Trip!")
   )
   ),
 
@@ -394,7 +394,7 @@ fluidRow(
              id = "set_back_btn"
            )
     ),
-    actionButton("next_set", "Next Set")
+    actionButton("next_set", "Save and Next Set")
   )
 ),
 
@@ -424,14 +424,14 @@ fluidRow(
 fluidRow(
   div(
     class = "title-with-button",
-    div(class = "title-panel", titlePanel(HTML("<span style='font-size: 24px;'> TRAP INFO</span> <span style='font-size: 16px;'>*Only traps with bait codes are uploaded when you hit Next...</span>"))),  # Wrap the title in title-panel div
+    div(class = "title-panel", titlePanel(HTML("<span style='font-size: 24px;'> TRAP INFO</span> <span style='font-size: 16px;'>*Only traps with bait codes are submitted when you hit Next...</span>"))),  # Wrap the title in title-panel div
     column(12, align = "right",  ### arrow button
            tags$div(
              class = "arrow-button arrow-left",
              id = "trap_back_btn"
            )
     ),
-    actionButton("next_trap", "Next Trap")
+    actionButton("next_trap", "Save and Next Trap")
   )
 ),
 
@@ -448,7 +448,7 @@ fluidRow(
 fluidRow(     ### use button formatted title class for FISH row just for easy formatting consistency
   div(
     class = "title-with-button",
-    div(class = "title-panel", titlePanel(HTML("<span style='font-size: 24px;'> FISH INFO</span> <span style='font-size: 16px;'>* For Empty Trap: Species Code = 9999, Abundance = 0</span>"))))
+    div(class = "title-panel", titlePanel(HTML("<span style='font-size: 24px;'> FISH INFO</span> <span style='font-size: 16px;'>* For Empty Trap: Species Code = 9999, Abundance = 0 (Only rows with species code are submitted)</span>"))))
   ),
 ## dynamically duplicating fish info row:
 fluidRow(
