@@ -1731,6 +1731,19 @@ suppressWarnings({
   ### When Trip is submitted
   observeEvent(input$submit_trip, {
 
+    ## as a last cleanup step, convert any character 'NA' values that got introduced to sql NULL to unify missing values format
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+    tables <- c("TRIP_INFO", "SET_INFO", "TRAP_INFO", "FISH_INFO")
+
+    for (table in tables) {
+      col_info <- dbGetQuery(db, paste0("PRAGMA table_info(", table, ");"))
+      for (col in col_info$name) {
+        query <- paste0("UPDATE ", table, " SET ", col, " = NULL WHERE ", col, " = 'NA'")
+        dbExecute(db, query)
+      }
+    }
+    dbDisconnect(db)
+
     print(paste0("Trip Entered. The data for your trip is in ",dat.dir,"/INPUT_DATA.db"))
     print("Use check.table() to view the data tables.")
     stopApp()
