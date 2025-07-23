@@ -358,8 +358,8 @@ fluidRow(
 
   fluidRow(
     column(2, dateInput("board_date", "BOARDING DATE",value = NA)),
-    column(2, dateInput("land_date", "LANDING DATE",value = NA)),
     column(2, numericInput("vessel_num", "VESSEL REG #", value = NA, min = 0, max = 999999, step = 1)),
+    column(2, dateInput("land_date", "LANDING DATE",value = NA)),
     column(2, textInput("vessel_name", "VESSEL NAME"))
 
   ),
@@ -691,8 +691,8 @@ suppressWarnings({
     checktrip <- paste("SELECT * FROM TRIP_INFO WHERE TRIP_ID = '",trip.id, "'", sep = "")
     trip.result <- dbGetQuery(db, checktrip)
     bdate <- as.character(input$board_date) ## ensure dates get uplaoded as strings
-    ldate <- as.character(input$land_date)
-    edate <- as.character(input$entry_date)
+    if(length(input$land_date)>0){ldate <- as.character(input$land_date)}else{ldate <- NA}
+    if(length(input$entry_date)>0){edate <- as.character(input$entry_date)}else{edate <- NA}
     if(nrow(trip.result)==0){
       trip.dat <- data.frame(
         trip.id,
@@ -891,7 +891,7 @@ suppressWarnings({
       })
 
       # Clear input fields for trip INFO
-      # updateDateInput(session, "land_date", value = NA)
+      suppressWarnings(updateDateInput(session, "land_date", value = NA))
       updateTextInput(session, "vessel_name", value = "")
       updateNumericInput(session, "license_num", value = NA)
       updateTextInput(session, "captain_name", value = "")
@@ -899,7 +899,7 @@ suppressWarnings({
       updateSelectInput(session, "lfa", selected = "")
       updateSelectInput(session, "entry_group", selected = "")
       updateTextInput(session, "entry_name", value = NA)
-      suppressWarnings(updateDateInput(session, "entry_date", value = NA))
+      #suppressWarnings(updateDateInput(session, "entry_date", value = NA))
 
     }else{
       new.trip <- trip.id()
@@ -912,7 +912,7 @@ suppressWarnings({
 
         if(nrow(trip.result)==0){
           # Clear input fields for trip INFO
-         # updateDateInput(session, "land_date", value = NA)
+          suppressWarnings(updateDateInput(session, "land_date", value = NA))
           updateTextInput(session, "vessel_name", value = "")
           updateNumericInput(session, "license_num", value = NA)
           updateTextInput(session, "captain_name", value = "")
@@ -920,12 +920,12 @@ suppressWarnings({
           updateSelectInput(session, "lfa", selected = "")
           updateSelectInput(session, "entry_group", selected = "")
           updateTextInput(session, "entry_name", value = NA)
-          suppressWarnings(updateDateInput(session, "entry_date", value = NA))
+          #suppressWarnings(updateDateInput(session, "entry_date", value = NA))
 
 
         }else{
           ## if there is data for current trip, fill fields
-          suppressWarnings( updateDateInput(session, "land_date", value = as.Date(trip.result$LANDING_DATE)))
+          suppressWarnings(updateDateInput(session, "land_date", value = as.Date(trip.result$LANDING_DATE)))
           updateTextInput(session, "vessel_name", value = trip.result$VESSEL_NAME)
           updateNumericInput(session, "license_num", value = trip.result$LICENSE_NO)
           updateTextInput(session, "captain_name", value = trip.result$CAPTAIN)
@@ -1731,24 +1731,68 @@ suppressWarnings({
   ### When Trip is submitted
   observeEvent(input$submit_trip, {
 
-    ## as a last cleanup step, convert any character 'NA' values that got introduced to sql NULL to unify missing values format
-    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
-    tables <- c("TRIP_INFO", "SET_INFO", "TRAP_INFO", "FISH_INFO")
-
-    for (table in tables) {
-      col_info <- dbGetQuery(db, paste0("PRAGMA table_info(", table, ");"))
-      for (col in col_info$name) {
-        query <- paste0("UPDATE ", table, " SET ", col, " = NULL WHERE ", col, " = 'NA'")
-        dbExecute(db, query)
+    ## save everything on the screen when this is clicked
+    ## define IDs for relational columns
+    set.id <- NULL
+    trap.id <- NULL
+    trip.id <- trip.id()
+    continue = T
+    if(is.null(trip.id)){
+      warning("No TRIP ID Found! No Data Saved!")
+      showNotification("No TRIP ID FOUND! No Please Complete TRIP INFO!", type = "error")
+      continue = F
+    }
+    if(continue){
+      if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){set.id <- paste0(trip.id(),"_",input$set_num)
+      }else{
+        # warning("No Set ID Found!")
+        # showNotification("No SET ID FOUND!", type = "error")
+        # continue = F
       }
     }
-    dbDisconnect(db)
+    if(continue){
+      if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+      }else{
+        # warning("No Trap ID Found!")
+        # showNotification("No TRAP ID FOUND!", type = "error")
+        # continue = F
+      }
+    }
+    delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
+    if(continue){
+        # Initialize database connection
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+        ## Update trip always
+        update.trip(db, trip.id)
+        ## ask user if they want to save the onscreen data
+        save.set <- dlgMessage(type = "yesno", message = "Saving TRIP INFO. Do you want to save the current (on-screen) SET INFO? Any baited traps and fish currently on-screen will also be saved.")
+        if(save.set$res %in% "yes"){
+          update.set(db, trip.id = trip.id, set.id = set.id)
+          if(!is.na(input$bait_code) && !is.null(input$bait_code)){ ## don't upload blank traps
+            update.trap(db,set.id = set.id, trap.id = trap.id)
+            update.fish(db, trap.id = trap.id)
+          }
+          }
 
-    print(paste0("Trip Entered. The data for your trip is in ",dat.dir,"/INPUT_DATA.db"))
-    print("Use check.table() to view the data tables.")
-    stopApp()
+      ## as a last cleanup step, convert any character 'NA' values that got introduced to sql NULL to unify missing values format
+      #db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+      tables <- c("TRIP_INFO", "SET_INFO", "TRAP_INFO", "FISH_INFO")
 
-  })
+      for (table in tables) {
+        col_info <- dbGetQuery(db, paste0("PRAGMA table_info(", table, ");"))
+        for (col in col_info$name) {
+          query <- paste0("UPDATE ", table, " SET ", col, " = NULL WHERE ", col, " = 'NA'")
+          dbExecute(db, query)
+        }
+      }
+
+      print(paste0("Trip Entered. The data for your trip is in ",dat.dir,"/INPUT_DATA.db"))
+      print("Use check.table() to view the data tables.")
+      dbDisconnect(db)
+      stopApp()
+    }
+    }) #delay
+  }) ### observEvent block
 
 
 
