@@ -437,7 +437,7 @@ fluidRow(
 
 fluidRow(
   column(1, numericInput("trap_num", "TRAP NO",value = NA, min = 0)),
-  column(1, numericInput("bait_code", "BAIT CD",value = NA, min = 0)),
+  column(1, numericInput("bait_code", "BAIT CD1",value = NA, min = 0)),
   column(1, numericInput("bait_code2", "BAIT CD2",value = NA, min = 0)),
   column(1, numericInput("bait_code3", "BAIT CD3",value = NA, min = 0)),
   column(2, numericInput("bait_type1", "BAIT TYPE1",value = NA, min = 1, max = 4)),
