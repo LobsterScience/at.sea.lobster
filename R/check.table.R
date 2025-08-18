@@ -3,10 +3,10 @@
 #' @import dplyr RSQLite
 #' @description opens and views SQL tables created by input.trip()
 #' @export
-check.table <- function(table = "default", dat.dir = dat.dir.global){
+check.table <- function(table = "default", dat.dir = dat.dir.global, trip = last.trip){
   suppressWarnings({
   # Initialize database connection
-  db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+  db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip,".db"))
 
   if(table  %in% "fish"){
     query = paste0("SELECT * FROM FISH_INFO")

@@ -1,11 +1,10 @@
-Package: Bycatch
+Package: at.sea.lobster
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Functions for inputting At-Sea-Sampling Lobster data
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Geraint Element
+Maintainer: Geraint Element <geraint.element@dfo-mpo.gc.ca>
+Description: Package is used for entry of At-Sea-Sampling (lobster) data. The main working function for inputting data is input.trip() which provides an R-Shiny based GUI to enter data by trip.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true

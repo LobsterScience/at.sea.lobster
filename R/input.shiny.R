@@ -10,12 +10,14 @@ input.trip <- function(){
 ######################################################################################################################################
   ##### SETUP AND TABLE CREATION
 
-dlg_message("In the following window, choose the directory where you want your database files to be stored.")
+dlg_message("In the following window, choose the directory where you want your trip data files to be stored (or where you've already stored trips that you want to update).")
 dat.dir <- dlg_dir(filter = dlg_filters["csv",])$res
 dat.dir.global <<- dat.dir ## for any other functions to reference
 
-## set connection
-con <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+create.trip <- function(dat.dir = NULL, trip.id = NULL){
+
+  ## set connection / create file
+  con <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
 
 ##check for and create db tables if they don't exist
 
@@ -152,6 +154,7 @@ if (result[[1]] == 0) {
   dbClearResult(make.tab)
 }
 
+}
 
 ###########################################################################################
 ######## SHINY CODE vv
@@ -376,6 +379,7 @@ fluidRow(
     column(2, textInput("trip_code", "TRIP"), style = "pointer-events: none; opacity: 0.5;")
   ),
 
+
   ################################################## SET INFO
 fluidRow(
   div(
@@ -524,7 +528,10 @@ suppressWarnings({
     )
     data <- rbind(data,data.row)
   }
+
+  ## specific edits to data before upload
   data <- data %>% filter(!species_code %in% NA) ### remove last unfilled row where species code wasn't added
+
     # Insert data into the database (upload if no existing fish, update if fish found)
     checkfish <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     fish.result <- dbGetQuery(db, checkfish)
@@ -845,7 +852,7 @@ suppressWarnings({
             numericInput(paste0("vnotch_", row_id), "VNOTCH", min = 0, max = 5, value = NA)
         ),
         div(class = "compact-input",
-            numericInput(paste0("kept_", row_id), "KEPT", min = 0, max = 1, value = NA)
+            selectInput(paste0("kept_", row_id), "KEPT", choices = c("","Y","N"))
         ),
         div(class = "compact-input",
             numericInput(paste0("abund_", row_id), "ABUNDANCE", value = NA, min = 0)
@@ -904,8 +911,16 @@ suppressWarnings({
     }else{
       new.trip <- trip.id()
       if(!is.null(new.trip)){
-        # check database for existing set
-        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+        files <- list.files(dat.dir)
+        if(!paste0(new.trip,".db") %in% files){
+          ask.create <- dlgMessage(type = "yesno", message = "A .db file for this trip does not yet exist in your chosen directory. Create it?.")
+        }
+        if(ask.create$res %in% "yes"){
+        ## set last trip for check.table function
+        last.trip <<- new.trip
+        # check database for existing set (create if missing)
+        create.trip(dat.dir = dat.dir, trip.id = new.trip)
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",new.trip,".db"))
         checktrip <- paste("SELECT * FROM TRIP_INFO WHERE TRIP_ID = '",new.trip, "'", sep = "")
         trip.result <- dbGetQuery(db, checktrip)
         dbDisconnect(db)
@@ -936,14 +951,20 @@ suppressWarnings({
           suppressWarnings(updateDateInput(session, "entry_date", value = as.Date(trip.result$CREATED_DATE)))
         }
 
+        ### then begin set # at 1 (or clear if trip code is cleared)
+        updateNumericInput(session, "set_num", value = NA)
+        delay(5,{
+          updateNumericInput(session, "set_num", value = 1)
+        })
+
+        }else{ ## if user declines to create new trip, just clear the date so they must start over
+          suppressWarnings(updateDateInput(session, "board_date", value = NA))
+      }
+
       }
 
 
-      ### then begin set # at 1 (or clear if trip code is cleared)
-      updateNumericInput(session, "set_num", value = NA)
-      delay(5,{
-        updateNumericInput(session, "set_num", value = 1)
-      })
+
     }
   }, ignoreInit = T)
 
@@ -957,7 +978,7 @@ suppressWarnings({
 
     if(!is.null(new.set)){
       # check database for existing set
-      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
       checkset <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",new.set, "'", sep = "")
       set.result <- dbGetQuery(db, checkset)
       dbDisconnect(db)
@@ -1018,7 +1039,7 @@ suppressWarnings({
 
     if(!is.null(trip.id) & !is.null(set.id) & !is.null(new.trap)){
       # check database for existing trap
-      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
       checktrap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
       trap.result <- dbGetQuery(db, checktrap)
       dbDisconnect(db)
@@ -1063,7 +1084,7 @@ suppressWarnings({
         updateNumericInput(session, "bait_type3", value = trap.result$BAIT_TYPE3[1])
 
         ## for fish, match GUI row number to existing fish rows in db, then update with the existing fish
-        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
         existing.fish <-  paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",new.trap, "'", sep = "")
         fish.result <- dbGetQuery(db, existing.fish)
         dbDisconnect(db)
@@ -1276,7 +1297,7 @@ suppressWarnings({
   greyouts <- function(row_id = NULL){
   ##reset all fields
   shinyjs::enable(paste0("spec_code_", row_id) )
-  shinyjs::enable(paste0("common_", row_id) )
+  #shinyjs::enable(paste0("common_", row_id) )
   shinyjs::enable(paste0("length_", row_id) )
   shinyjs::enable(paste0("sex_", row_id) )
   shinyjs::enable(paste0("shell_", row_id) )
@@ -1371,6 +1392,7 @@ suppressWarnings({
     current_rows <- row_ids()
     # Create an observer for each spec.code field
     lapply(current_rows, function(row_id) {
+      shinyjs::disable(paste0("common_", row_id) ) ## user interaction is always disabled for common name
       observeEvent(input[[paste0("spec_code_", row_id)]], {
         req(!suppress_spec_fill()) ## don't do anything if change is result of a data import
         # Get the updated value
@@ -1511,7 +1533,7 @@ suppressWarnings({
         if(continue){
           delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
             # Initialize database connection
-            db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+            db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
 
             ## Update upstream and downstream data
             update.trip(db, trip.id)
@@ -1578,7 +1600,7 @@ suppressWarnings({
       if(sure.delete$res %in% "yes"){
       delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
         # Initialize database connection
-        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
 
         ## delete all trap and fish infor for trap
         update.trap(db,set.id = set.id, trap.id = trap.id, delete = T)
@@ -1637,7 +1659,7 @@ suppressWarnings({
     if(continue){
       delay(10, {
         # Initialize database connection
-        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
 
         ## update upstream data
         update.trip(db, trip.id)
@@ -1702,7 +1724,7 @@ suppressWarnings({
       if(sure.delete$res %in% "yes"){
         delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
           # Initialize database connection
-          db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+          db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
 
           ## delete all set, trap and fish infor for trap
           update.set(db, trip.id = trip.id, set.id = set.id, delete = T)
@@ -1761,7 +1783,7 @@ suppressWarnings({
     delay(10,{ ## give delay to make sure all relational variables are properly set before updating db
     if(continue){
         # Initialize database connection
-        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
         ## Update trip always
         update.trip(db, trip.id)
         ## ask user if they want to save the onscreen data
@@ -1775,7 +1797,6 @@ suppressWarnings({
           }
 
       ## as a last cleanup step, convert any character 'NA' values that got introduced to sql NULL to unify missing values format
-      #db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/INPUT_DATA.db"))
       tables <- c("TRIP_INFO", "SET_INFO", "TRAP_INFO", "FISH_INFO")
 
       for (table in tables) {
@@ -1786,7 +1807,7 @@ suppressWarnings({
         }
       }
 
-      print(paste0("Trip Entered. The data for your trip is in ",dat.dir,"/INPUT_DATA.db"))
+      print(paste0("Trip Entered. The data for your trip is in ",dat.dir,"/",trip.id,".db"))
       print("Use check.table() to view the data tables.")
       dbDisconnect(db)
       stopApp()
@@ -2577,10 +2598,10 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
                         input[[paste0("vnotch_", row_id)]]),{
         hideFeedback(paste0("kept_", row_id))
         checks$check41 <- T
-        if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
-          showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
-          checks$check41 <- F
-        }
+        # if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
+        #   showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
+        #   checks$check41 <- F
+        # }
         if(input[[paste0("kept_", row_id)]] %in% 1){  ## if lobster is being recorded as kept, there may be various warnings for prohibitions:
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"")

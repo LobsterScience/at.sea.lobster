@@ -6,7 +6,7 @@ Data tables can be checked in R with the check.table() function (ex. check.table
 
 To install the package:
 
-devtools::install\_github("LobsterScience/at.sea.loster")
+devtools::install\_github("LobsterScience/at.sea.lobster")
 
 
 
