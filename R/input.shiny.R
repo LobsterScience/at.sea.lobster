@@ -2,7 +2,7 @@
 
 #' @title input.trip
 #' @import dplyr RSQLite shiny svDialogs shinyjs shinyFeedback sf
-#' @description Creates GUI for entering bycatch data by trip
+#' @description Creates GUI for entering lobster At-Sea Sampling data by trip
 #' @export
 
 input.trip <- function(){
@@ -474,23 +474,23 @@ suppressWarnings({
 
   ## DATA FILE IMPORTS
   ## bring in species and other code lists so they only have to be uploaded once
-  spec.tab <- readRDS(paste0(system.file("data", package = "Bycatch"),"/SPECIESCODES.rds"))
+  spec.tab <- readRDS(paste0(system.file("data", package = "at.sea.lobster"),"/SPECIESCODES.rds"))
   ## remove code 2553 code for berried lobster (rdundan and potentially confusing)
   spec.tab <- spec.tab %>% filter(!SPECIES_CODE %in% 2553)
   #crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
   crust.codes <- c(2550,2552,2511,2513,2520,2523,2526,2531)
   #wsu <- spec.tab[grepl("whelk|starfish|urchin", spec.tab$COMMON, ignore.case = TRUE), ]
   abund.species <- c(4210,2559,6400,6100,4330,2100,4321,8520)
-  code.tab <- readRDS(paste0(system.file("data", package = "Bycatch"), "/codes.rds"))
-  condition <- readRDS(paste0(system.file("data", package = "Bycatch"), "/condition.rds"))
-  lfa.data <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAdata.rds"))
+  code.tab <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/codes.rds"))
+  condition <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/condition.rds"))
+  lfa.data <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/LFAdata.rds"))
   ## Spatial files
-  lfapolys <- readRDS(paste0(system.file("data", package = "Bycatch"), "/LFAPolysSF.rds"))
+  lfapolys <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/LFAPolysSF.rds"))
   lfapolys$LFA <- paste0("L",lfapolys$LFA)
   lfapolys <- lfapolys %>% mutate(LFA = ifelse(LFA %in% "L311","L31A",
                                                 ifelse(LFA %in% "L312","L31B",
                                                        LFA)))
-  gridpolys <- readRDS(paste0(system.file("data", package = "Bycatch"), "/GridPolysSF.rds"))
+  gridpolys <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/GridPolysSF.rds"))
   gridpolys$LFA <- paste0("L",gridpolys$LFA)
   gridpolys <- gridpolys %>% mutate(LFA = ifelse(LFA %in% "L311","L31A",
                                                 ifelse(LFA %in% "L312","L31B",
@@ -2605,7 +2605,11 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
         if(!input[[paste0("vnotch_", row_id)]] %in% c(NULL,NA,0:5)){
           showFeedbackDanger(paste0("vnotch_", row_id), "Allowed values are 0,1,2,3,4,5")
           checks$check40 <- F
+        }else{
+          vnotch<-code.tab$Name[which(code.tab$Field %in% "vnotch" & code.tab$Code %in% input[[paste0("vnotch_", row_id)]])]
+          showFeedback(paste0("vnotch_", row_id), vnotch)
         }
+
       }, ignoreInit = T)
 
       ## 41 Kept
