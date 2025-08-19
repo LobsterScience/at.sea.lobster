@@ -362,6 +362,7 @@ fluidRow(
   fluidRow(
     column(2, dateInput("board_date", "BOARDING DATE",value = NA)),
     column(2, numericInput("vessel_num", "VESSEL REG #", value = NA, min = 0, max = 999999, step = 1)),
+    column(2, actionButton("go", "Make/Find Trip")),
     column(2, dateInput("land_date", "LANDING DATE",value = NA)),
     column(2, textInput("vessel_name", "VESSEL NAME"))
 
@@ -871,9 +872,19 @@ suppressWarnings({
 
   #### AUTOFILLS ###############################
 
-  ## create Trip code when enough info is entered
-  observeEvent(
-    list(input$vessel_num, input$board_date), {
+  ## activate make/find trip button only when both board date and vessel reg# are entered
+  observe({
+    if(is.null(input$board_date) || is.na(input$board_date) || is.null(input$vessel_num) || is.na(input$vessel_num)){
+      disable("go")
+    }else{
+      enable("go")
+    }
+  })
+
+  ## create Trip code and look for trip when enough info is entered and user hits go button
+  observeEvent(input$go, {
+    req(input$board_date)
+    req(input$vessel_num)
       if (length(input$board_date)==0  || is.na(input$vessel_num) || input$vessel_num == "") {
         updateTextInput(session, "trip_code", value = NA)
         trip.id(NULL)
@@ -918,6 +929,9 @@ suppressWarnings({
           continue.create <- continue.create$res
         }
         if(continue.create %in% "yes"){
+          disable("board_date")
+          disable("vessel_num")
+          disable("go")
         ## set last trip for check.table function
         last.trip <<- new.trip
         # check database for existing set (create if missing)
