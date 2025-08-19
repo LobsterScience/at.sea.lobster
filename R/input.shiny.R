@@ -912,10 +912,12 @@ suppressWarnings({
       new.trip <- trip.id()
       if(!is.null(new.trip)){
         files <- list.files(dat.dir)
+        continue.create <- "yes"
         if(!paste0(new.trip,".db") %in% files){
-          ask.create <- dlgMessage(type = "yesno", message = "A .db file for this trip does not yet exist in your chosen directory. Create it?.")
+          continue.create <- dlgMessage(type = "yesno", message = "A .db file for this trip does not yet exist in your chosen directory. Create it?.")
+          continue.create <- continue.create$res
         }
-        if(ask.create$res %in% "yes"){
+        if(continue.create %in% "yes"){
         ## set last trip for check.table function
         last.trip <<- new.trip
         # check database for existing set (create if missing)
@@ -957,8 +959,8 @@ suppressWarnings({
           updateNumericInput(session, "set_num", value = 1)
         })
 
-        }else{ ## if user declines to create new trip, just clear the date so they must start over
-          suppressWarnings(updateDateInput(session, "board_date", value = NA))
+        }else{ ## if user declines to create new trip, just clear the vessel reg # so they must choose a new one
+          updateNumericInput(session, "vessel_num", value = NA)
       }
 
       }
