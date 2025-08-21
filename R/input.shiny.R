@@ -445,9 +445,9 @@ fluidRow(
   column(1, numericInput("bait_code", "BAIT CD1",value = NA, min = 0)),
   column(1, numericInput("bait_code2", "BAIT CD2",value = NA, min = 0)),
   column(1, numericInput("bait_code3", "BAIT CD3",value = NA, min = 0)),
-  column(2, numericInput("bait_type1", "BAIT TYPE1",value = NA, min = 1, max = 4)),
-  column(2, numericInput("bait_type2", "BAIT TYPE2",value = NA, min = 1, max = 4)),
-  column(2, numericInput("bait_type3", "BAIT TYPE3",value = NA, min = 1, max = 4))
+  column(1, numericInput("bait_type1", "BAIT TYPE1",value = NA, min = 1, max = 4)),
+  column(1, numericInput("bait_type2", "BAIT TYPE2",value = NA, min = 1, max = 4)),
+  column(1, numericInput("bait_type3", "BAIT TYPE3",value = NA, min = 1, max = 4))
   ),
 
 fluidRow(     ### use button formatted title class for FISH row just for easy formatting consistency
@@ -478,7 +478,7 @@ suppressWarnings({
   ## remove code 2553 code for berried lobster (rdundan and potentially confusing)
   spec.tab <- spec.tab %>% filter(!SPECIES_CODE %in% 2553)
   #crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
-  crust.codes <- c(2550,2552,2511,2513,2520,2523,2526,2531)
+  crust.codes <- c(2550,2552,2511,2513,2520,2523,2526,2531) ## doesn't include lobster larvae (2551)
   #wsu <- spec.tab[grepl("whelk|starfish|urchin", spec.tab$COMMON, ignore.case = TRUE), ]
   abund.species <- c(4210,2559,6400,6100,4330,2100,4321,8520)
   code.tab <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/codes.rds"))
@@ -819,8 +819,12 @@ suppressWarnings({
   create_row <- function(row_id) {
     div(id = paste0("row_container_", row_id), class = "compact-row",
         div(class = "compact-input",
+            numericInput(paste0("set_num_", row_id), "SET NO", value = NA, min = 0),
+            style = "pointer-events: none; opacity: 0.8;"
+        ),
+        div(class = "compact-input",
             numericInput(paste0("trap_num_", row_id), "TRAP NO", value = NA, min = 0),
-            style = "pointer-events: none; opacity: 0.5;"
+            style = "pointer-events: none; opacity: 0.8;"
         ),
         div(class = "compact-input",
             numericInput(paste0("spec_code_", row_id), "SPECIES CODE", value = NA, min = 0)
@@ -1073,6 +1077,8 @@ suppressWarnings({
 ###### FISH row Autofilling begins here
 
         for (row_id in row_ids()) {
+           disable(paste0("set_num_", row_id))## fish row set and trap fields should always be disabled(greyed out for user):
+           disable(paste0("trap_num_", row_id))
           ##updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)  ## we have a seperate continuous observer for fish row trap number
           updateNumericInput(session, paste0("spec_code_", row_id), value = NA)
           updateTextInput(session, paste0("common_", row_id), value = "")
@@ -1217,13 +1223,22 @@ suppressWarnings({
 
 
 
-  ##  Autofill Update each fish row's trap.num field with the current input$trap_num value
+  ##  Autofill Update each fish row's trap.num and set.num field with the current input$trap_num and input$setvalue
   observeEvent(list(input$trap_num, row_ids()), {
     req(input$trap_num) # Ensure trap.num has a value
     delay(5, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
       current_rows <- row_ids()
       lapply(current_rows, function(row_id) {
         updateNumericInput(session, paste0("trap_num_", row_id), value = input$trap_num)
+      })
+    })
+  })
+  observeEvent(list(input$set_num, row_ids()), {
+    req(input$set_num) # Ensure trap.num has a value
+    delay(5, {  ## delay ensures that row_ids() has enough time to update after new action is taken (sometimes this can lag and rows get missed)
+      current_rows <- row_ids()
+      lapply(current_rows, function(row_id) {
+        updateNumericInput(session, paste0("set_num_", row_id), value = input$set_num)
       })
     })
   })
@@ -1308,6 +1323,9 @@ suppressWarnings({
       insertUI(selector = "#dynamicRows", where = "beforeEnd", ui = create_row(new_id))
     }
   })
+
+
+  ########### GREY-OUTS (Disabling of fields)
 
   ## grey-outs function (contains rules for greying out fields by species, sex)
   greyouts <- function(row_id = NULL){
@@ -1402,13 +1420,14 @@ suppressWarnings({
 
   ### Automated fill and greyout responses for FISH fields:
 
+
   ## continually observe catch spec code input to auto-fill common name
   observe({
     #req(!suppress_spec_fill())  ## most of below code should only work for manual filling of rows (shouldnt be triggered at all by imported data filling, except for greyouts)
     current_rows <- row_ids()
     # Create an observer for each spec.code field
     lapply(current_rows, function(row_id) {
-      shinyjs::disable(paste0("common_", row_id) ) ## user interaction is always disabled for common name
+      disable(paste0("common_", row_id) ) ## user interaction is always disabled for common name
       observeEvent(input[[paste0("spec_code_", row_id)]], {
         req(!suppress_spec_fill()) ## don't do anything if change is result of a data import
         # Get the updated value
@@ -2438,7 +2457,7 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
            input[[paste0("length_", row_id)]] %in% c(NA,NULL)){
           showFeedbackWarning(paste0("length_", row_id), "Missing Value!")
         }else{
-          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2551,2552)){
+          if(input[[paste0("spec_code_", row_id)]] %in% c(crust.codes,2551)){ ## includes lobster larvae 2551
             showFeedback(paste0("length_", row_id), "mm")
             if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
                (input[[paste0("length_", row_id)]] < 20 | input[[paste0("length_", row_id)]] > 250)){
@@ -2618,6 +2637,7 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
                         input[[paste0("vnotch_", row_id)]]),{
         hideFeedback(paste0("kept_", row_id))
         checks$check41 <- T
+        req(input[[paste0("kept_", row_id)]])
         # if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
         #   showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
         #   checks$check41 <- F
