@@ -171,24 +171,32 @@ ui <- fluidPage(
 ## adjust functioanlity of specific keys for best user experience
 ## so Enter produces a Tab effect (good for number pad data entry)
 tags$script(HTML("
-    document.addEventListener('keydown', function(e) {
-      // Check if Enter was pressed
-      if (e.key === 'Enter') {
-        e.preventDefault();  // Prevent default Enter action
-        // Find the next focusable element (like Tab would do)
-        let focusable = Array.prototype.filter.call(
-          document.querySelectorAll('input, select, textarea, button, [tabindex]'),
-          function(el) {
-            return el.tabIndex >= 0 && !el.disabled && el.offsetParent !== null;
-          }
-        );
-        let index = focusable.indexOf(document.activeElement);
-        if (index > -1 && index + 1 < focusable.length) {
-          focusable[index + 1].focus();
+  document.addEventListener('keydown', function(e) {
+    // Check if Enter was pressed
+    if (e.key === 'Enter') {
+      e.preventDefault();  // Prevent default Enter action
+
+      // Find all focusable elements
+      let focusable = Array.prototype.filter.call(
+        document.querySelectorAll('input, select, textarea, button, [tabindex]'),
+        function(el) {
+          return el.tabIndex >= 0 && !el.disabled && el.offsetParent !== null;
+        }
+      );
+
+      let index = focusable.indexOf(document.activeElement);
+      if (index > -1 && index + 1 < focusable.length) {
+        let next = focusable[index + 1];
+        next.focus();
+
+        // If it's a text input or textarea, select its contents (like Tab does)
+        if (next.tagName === 'INPUT' || next.tagName === 'TEXTAREA') {
+          next.select();
         }
       }
-    });
-  ")),
+    }
+  });
+")),
 
 ## so Esc produces undo effect like Ctrl+z
 tags$script(HTML("
@@ -861,6 +869,8 @@ suppressWarnings({
   greyouts.fish <- function(row_id = NULL, enable.fish = T){
 
     if(enable.fish){
+      shinyjs::disable(paste0("set_num_", row_id) )
+      shinyjs::disable(paste0("trap_num_", row_id) )
         shinyjs::enable(paste0("spec_code_", row_id) )
         shinyjs::disable(paste0("common_", row_id) )
         shinyjs::enable(paste0("length_", row_id) )
@@ -949,6 +959,8 @@ suppressWarnings({
 
     }else{## on start-up, disable all fields until a trip is found/created
 
+        shinyjs::disable(paste0("set_num_", row_id) )
+        shinyjs::disable(paste0("trap_num_", row_id) )
         shinyjs::disable(paste0("spec_code_", row_id) )
         shinyjs::disable(paste0("common_", row_id) )
         shinyjs::disable(paste0("length_", row_id) )
