@@ -168,6 +168,39 @@ ui <- fluidPage(
   useShinyjs(), ##necessary for delay functions to work
   useShinyFeedback(),  ## necessary for inline error check warnings to work
 
+## adjust functioanlity of specific keys for best user experience
+## so Enter produces a Tab effect (good for number pad data entry)
+tags$script(HTML("
+    document.addEventListener('keydown', function(e) {
+      // Check if Enter was pressed
+      if (e.key === 'Enter') {
+        e.preventDefault();  // Prevent default Enter action
+        // Find the next focusable element (like Tab would do)
+        let focusable = Array.prototype.filter.call(
+          document.querySelectorAll('input, select, textarea, button, [tabindex]'),
+          function(el) {
+            return el.tabIndex >= 0 && !el.disabled && el.offsetParent !== null;
+          }
+        );
+        let index = focusable.indexOf(document.activeElement);
+        if (index > -1 && index + 1 < focusable.length) {
+          focusable[index + 1].focus();
+        }
+      }
+    });
+  ")),
+
+## so Esc produces undo effect like Ctrl+z
+tags$script(HTML("
+    document.addEventListener('keydown', function(e) {
+      // Map Esc to Undo
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        document.execCommand('undo');
+      }
+    });
+  ")),
+
 # reduce general sizing / decrease padding between input fields /manage opacity
   tags$style(HTML("
      body {
@@ -753,6 +786,188 @@ suppressWarnings({
 
   ## INITIAL CONDITIONS ######################
 
+
+  ## GREY-OUTS (Disabling of fields)
+  ungrey.fish <- reactiveVal(FALSE)  ## fish fields need to be reactively enabled later in server code
+  ## on start-up, disable all fields until a trip is found/created
+    greyouts.main <- function(enable.main = T){
+
+    if(enable.main){
+    ##reset all fields
+    shinyjs::enable("trap_num")
+    shinyjs::enable("bait_code")
+    shinyjs::enable("bait_code2")
+    shinyjs::enable("bait_code3")
+    shinyjs::enable("bait_type1")
+    shinyjs::enable("bait_type2")
+    shinyjs::enable("bait_type3")
+
+    shinyjs::enable("land_date")
+    shinyjs::enable("vessel_name")
+    shinyjs::enable("license_num")
+    shinyjs::enable("captain_name")
+    shinyjs::enable("sampler_name")
+    shinyjs::enable("lfa")
+    shinyjs::enable("entry_group")
+    shinyjs::enable("entry_name")
+    shinyjs::enable("entry_date")
+    shinyjs::enable("trip_code")
+
+    shinyjs::enable("set_num")
+    shinyjs::enable("num_traps")
+    shinyjs::enable("lat")
+    shinyjs::enable("lon")
+    shinyjs::enable("grid_num")
+    shinyjs::enable("depth")
+    shinyjs::enable("soak_days")
+    shinyjs::enable("trap_type")
+    shinyjs::enable("vent_size")
+    shinyjs::enable("num_vents")
+
+    }else{
+      shinyjs::disable("trap_num")
+      shinyjs::disable("bait_code")
+      shinyjs::disable("bait_code2")
+      shinyjs::disable("bait_code3")
+      shinyjs::disable("bait_type1")
+      shinyjs::disable("bait_type2")
+      shinyjs::disable("bait_type3")
+
+      shinyjs::disable("land_date")
+      shinyjs::disable("vessel_name")
+      shinyjs::disable("license_num")
+      shinyjs::disable("captain_name")
+      shinyjs::disable("sampler_name")
+      shinyjs::disable("lfa")
+      shinyjs::disable("entry_group")
+      shinyjs::disable("entry_name")
+      shinyjs::disable("entry_date")
+      shinyjs::disable("trip_code")
+
+      shinyjs::disable("set_num")
+      shinyjs::disable("num_traps")
+      shinyjs::disable("lat")
+      shinyjs::disable("lon")
+      shinyjs::disable("grid_num")
+      shinyjs::disable("depth")
+      shinyjs::disable("soak_days")
+      shinyjs::disable("trap_type")
+      shinyjs::disable("vent_size")
+      shinyjs::disable("num_vents")
+    }
+      }
+
+  ## grey-outs function (contains rules for greying out fields by species, sex)
+  greyouts.fish <- function(row_id = NULL, enable.fish = T){
+
+    if(enable.fish){
+        shinyjs::enable(paste0("spec_code_", row_id) )
+        shinyjs::disable(paste0("common_", row_id) )
+        shinyjs::enable(paste0("length_", row_id) )
+        shinyjs::enable(paste0("sex_", row_id) )
+        shinyjs::enable(paste0("shell_", row_id) )
+        shinyjs::enable(paste0("cond_", row_id) )
+        shinyjs::enable(paste0("disease_", row_id) )
+        shinyjs::enable(paste0("egg_", row_id) )
+        shinyjs::enable(paste0("clutch_", row_id) )
+        shinyjs::enable(paste0("vnotch_", row_id) )
+        shinyjs::enable(paste0("kept_", row_id) )
+        shinyjs::enable(paste0("abund_", row_id) )
+        shinyjs::enable(paste0("cull_", row_id) )
+
+        ### fish type options
+        ## 1. Crustacean (not lobster)
+        ## 2. Lobster
+        ## 3. abundance only species
+        ## 4. Other fish
+        ## 5. Empty Trap (9999)
+
+        ## if species ia crustacean
+        if(input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+          shinyjs::disable(paste0("shell_", row_id))
+          shinyjs::disable(paste0("disease_", row_id))
+          shinyjs::disable(paste0("egg_", row_id))
+          shinyjs::disable(paste0("clutch_", row_id))
+          shinyjs::disable(paste0("vnotch_", row_id))
+          shinyjs::disable(paste0("abund_", row_id))
+          shinyjs::disable(paste0("cull_", row_id))
+        } ## Crustacean
+
+        ## if species is lobster
+        if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+          shinyjs::disable(paste0("abund_", row_id))
+          if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
+            shinyjs::disable(paste0("egg_", row_id))
+            shinyjs::disable(paste0("clutch_", row_id))
+            shinyjs::disable(paste0("vnotch_", row_id))
+          }else{
+            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 2){
+              shinyjs::disable(paste0("egg_", row_id))
+              shinyjs::disable(paste0("clutch_", row_id))
+            }
+          }
+        } ## species is lobster
+
+        ## if species is abundance only species
+        if(input[[paste0("spec_code_", row_id)]] %in% abund.species){
+          shinyjs::disable(paste0("length_", row_id) )
+          shinyjs::disable(paste0("sex_", row_id) )
+          shinyjs::disable(paste0("shell_", row_id) )
+          shinyjs::disable(paste0("cond_", row_id) )
+          shinyjs::disable(paste0("disease_", row_id) )
+          shinyjs::disable(paste0("egg_", row_id) )
+          shinyjs::disable(paste0("clutch_", row_id) )
+          shinyjs::disable(paste0("vnotch_", row_id) )
+          shinyjs::disable(paste0("cull_", row_id) )
+        } ##species is abundance only
+
+
+        ## If species is Other Fish
+        if(!input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+          shinyjs::disable(paste0("shell_", row_id))
+          shinyjs::disable(paste0("disease_", row_id))
+          shinyjs::disable(paste0("egg_", row_id))
+          shinyjs::disable(paste0("clutch_", row_id))
+          shinyjs::disable(paste0("vnotch_", row_id))
+          shinyjs::disable(paste0("cull_", row_id))
+
+        } ## Other fish
+
+        ## Empty Trap (9999)
+        if(input[[paste0("spec_code_", "row_1")]] %in% 9999){
+          shinyjs::disable(paste0("length_", row_id) )
+          shinyjs::disable(paste0("sex_", row_id) )
+          shinyjs::disable(paste0("shell_", row_id) )
+          shinyjs::disable(paste0("cond_", row_id) )
+          shinyjs::disable(paste0("disease_", row_id) )
+          shinyjs::disable(paste0("egg_", row_id) )
+          shinyjs::disable(paste0("clutch_", row_id) )
+          shinyjs::disable(paste0("vnotch_", row_id) )
+          shinyjs::disable(paste0("kept_", row_id) )
+          shinyjs::disable(paste0("cull_", row_id) )
+        }
+
+    }else{## on start-up, disable all fields until a trip is found/created
+
+        shinyjs::disable(paste0("spec_code_", row_id) )
+        shinyjs::disable(paste0("common_", row_id) )
+        shinyjs::disable(paste0("length_", row_id) )
+        shinyjs::disable(paste0("sex_", row_id) )
+        shinyjs::disable(paste0("shell_", row_id) )
+        shinyjs::disable(paste0("cond_", row_id) )
+        shinyjs::disable(paste0("disease_", row_id) )
+        shinyjs::disable(paste0("egg_", row_id) )
+        shinyjs::disable(paste0("clutch_", row_id) )
+        shinyjs::disable(paste0("vnotch_", row_id) )
+        shinyjs::disable(paste0("kept_", row_id) )
+        shinyjs::disable(paste0("abund_", row_id) )
+        shinyjs::disable(paste0("cull_", row_id) )
+    }
+  }
+
+  ## on start-up, disable all fields until a trip is found/created
+  greyouts.main(enable.main = F)
+
   ## set reactive placeholder for trip.ID
   trip.id <- reactiveVal(NULL)
 
@@ -936,6 +1151,8 @@ suppressWarnings({
           disable("board_date")
           disable("vessel_num")
           disable("go")
+          ungrey.fish(TRUE) ## used reactively in species code reaction code later
+          greyouts.main(enable.main =T) ## use grey-outs function to enable all downstream fields
         ## set last trip for check.table function
         last.trip <<- new.trip
         # check database for existing set (create if missing)
@@ -1325,100 +1542,9 @@ suppressWarnings({
   })
 
 
-  ########### GREY-OUTS (Disabling of fields)
-
-  ## grey-outs function (contains rules for greying out fields by species, sex)
-  greyouts <- function(row_id = NULL){
-  ##reset all fields
-  shinyjs::enable(paste0("spec_code_", row_id) )
-  #shinyjs::enable(paste0("common_", row_id) )
-  shinyjs::enable(paste0("length_", row_id) )
-  shinyjs::enable(paste0("sex_", row_id) )
-  shinyjs::enable(paste0("shell_", row_id) )
-  shinyjs::enable(paste0("cond_", row_id) )
-  shinyjs::enable(paste0("disease_", row_id) )
-  shinyjs::enable(paste0("egg_", row_id) )
-  shinyjs::enable(paste0("clutch_", row_id) )
-  shinyjs::enable(paste0("vnotch_", row_id) )
-  shinyjs::enable(paste0("kept_", row_id) )
-  shinyjs::enable(paste0("abund_", row_id) )
-  shinyjs::enable(paste0("cull_", row_id) )
-
-  ### fish type options
-  ## 1. Crustacean (not lobster)
-  ## 2. Lobster
-  ## 3. abundance only species
-  ## 4. Other fish
-  ## 5. Empty Trap (9999)
-
-  ## if species ia crustacean
-  if(input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
-    shinyjs::disable(paste0("shell_", row_id))
-    shinyjs::disable(paste0("disease_", row_id))
-    shinyjs::disable(paste0("egg_", row_id))
-    shinyjs::disable(paste0("clutch_", row_id))
-    shinyjs::disable(paste0("vnotch_", row_id))
-    shinyjs::disable(paste0("abund_", row_id))
-    shinyjs::disable(paste0("cull_", row_id))
-  } ## Crustacean
-
-  ## if species is lobster
-  if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
-    shinyjs::disable(paste0("abund_", row_id))
-    if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
-      shinyjs::disable(paste0("egg_", row_id))
-      shinyjs::disable(paste0("clutch_", row_id))
-      shinyjs::disable(paste0("vnotch_", row_id))
-    }else{
-      if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & input[[paste0("sex_", row_id)]] %in% 2){
-        shinyjs::disable(paste0("egg_", row_id))
-        shinyjs::disable(paste0("clutch_", row_id))
-      }
-    }
-  } ## species is lobster
-
-  ## if species is abundance only species
-  if(input[[paste0("spec_code_", row_id)]] %in% abund.species){
-    shinyjs::disable(paste0("length_", row_id) )
-    shinyjs::disable(paste0("sex_", row_id) )
-    shinyjs::disable(paste0("shell_", row_id) )
-    shinyjs::disable(paste0("cond_", row_id) )
-    shinyjs::disable(paste0("disease_", row_id) )
-    shinyjs::disable(paste0("egg_", row_id) )
-    shinyjs::disable(paste0("clutch_", row_id) )
-    shinyjs::disable(paste0("vnotch_", row_id) )
-    shinyjs::disable(paste0("cull_", row_id) )
-  } ##species is abundance only
 
 
-  ## If species is Other Fish
-  if(!input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
-    shinyjs::disable(paste0("shell_", row_id))
-    shinyjs::disable(paste0("disease_", row_id))
-    shinyjs::disable(paste0("egg_", row_id))
-    shinyjs::disable(paste0("clutch_", row_id))
-    shinyjs::disable(paste0("vnotch_", row_id))
-    shinyjs::disable(paste0("cull_", row_id))
-
-  } ## Other fish
-
-  ## Empty Trap (9999)
-  if(input[[paste0("spec_code_", "row_1")]] %in% 9999){
-    shinyjs::disable(paste0("length_", row_id) )
-    shinyjs::disable(paste0("sex_", row_id) )
-    shinyjs::disable(paste0("shell_", row_id) )
-    shinyjs::disable(paste0("cond_", row_id) )
-    shinyjs::disable(paste0("disease_", row_id) )
-    shinyjs::disable(paste0("egg_", row_id) )
-    shinyjs::disable(paste0("clutch_", row_id) )
-    shinyjs::disable(paste0("vnotch_", row_id) )
-    shinyjs::disable(paste0("kept_", row_id) )
-    shinyjs::disable(paste0("cull_", row_id) )
-  }
-
-  }
-
-  ### Automated fill and greyout responses for FISH fields:
+  ### Automated fill responses for FISH fields:
 
 
   ## continually observe catch spec code input to auto-fill common name
@@ -1427,7 +1553,7 @@ suppressWarnings({
     current_rows <- row_ids()
     # Create an observer for each spec.code field
     lapply(current_rows, function(row_id) {
-      disable(paste0("common_", row_id) ) ## user interaction is always disabled for common name
+      #disable(paste0("common_", row_id) ) ## user interaction is always disabled for common name
       observeEvent(input[[paste0("spec_code_", row_id)]], {
         req(!suppress_spec_fill()) ## don't do anything if change is result of a data import
         # Get the updated value
@@ -1439,9 +1565,10 @@ suppressWarnings({
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
       ###
       ## control contextual restrictions to fish row field usage (which fields can be used for what species/sex selections etc.)
-      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]]),{
+      observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]], ungrey.fish()),{
         ## Activate greyouts function to grey disabled fields (even if all other autofilling is suppressed)
-        greyouts(row_id)
+        ungrey.fish <- ungrey.fish()
+        greyouts.fish(row_id, enable.fish = ungrey.fish)
         req(!suppress_spec_fill()) ## don't do anything else if change is result of a data import
         ## clear all fields if species code becomes empty
         if(input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA)){
