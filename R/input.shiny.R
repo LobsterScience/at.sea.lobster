@@ -1935,7 +1935,7 @@ suppressWarnings({
     continue = T
     if(is.null(trip.id)){
       warning("No TRIP ID Found! No Data Saved!")
-      showNotification("No TRIP ID FOUND! No Please Complete TRIP INFO!", type = "error")
+      showNotification("No TRIP ID FOUND! Please Complete TRIP INFO!", type = "error")
       continue = F
     }
     if(continue){
