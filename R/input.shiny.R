@@ -934,6 +934,7 @@ suppressWarnings({
 
         ## If species is Other Fish
         if(!input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+          shinyjs::disable(paste0("sex_", row_id) )
           shinyjs::disable(paste0("shell_", row_id))
           shinyjs::disable(paste0("disease_", row_id))
           shinyjs::disable(paste0("egg_", row_id))

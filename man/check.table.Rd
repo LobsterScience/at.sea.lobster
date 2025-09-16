@@ -4,7 +4,12 @@
 \alias{check.table}
 \title{check.table}
 \usage{
-check.table(table = "default", dat.dir = dat.dir.global)
+check.table(
+  table = "default",
+  dat.dir = dat.dir.global,
+  trip = last.trip,
+  trip.file = paste0(dat.dir, "/", trip, ".db")
+)
 }
 \description{
 opens and views SQL tables created by input.trip()

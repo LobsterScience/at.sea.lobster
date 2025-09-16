@@ -7,5 +7,5 @@
 input.trip()
 }
 \description{
-Creates GUI for entering bycatch data by trip
+Creates GUI for entering lobster At-Sea Sampling data by trip
 }
