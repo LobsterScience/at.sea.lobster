@@ -3,7 +3,20 @@
 #' @import dplyr RSQLite
 #' @description opens and views SQL tables created by input.trip()
 #' @export
-check.table <- function(table = "default", dat.dir = dat.dir.global, trip = last.trip, trip.file = paste0(dat.dir,"/",trip,".db")){
+check.table <- function(table = "default", choose.trip = FALSE, dat.dir = dat.dir.global, trip = last.trip){
+
+  if(!table %in% c("default","trip","set","trap","fish")){
+    warning("Error: Invalid table name, options are: 'trip','set','trap','fish'")
+    return(NULL)
+  }
+
+  trip.file = paste0(dat.dir,"/",trip,".db")
+
+  if(choose.trip){
+    dlg_message(paste0("In the following window, select the .db trip file you want to check."))
+    trip.file <- dlg_open()$res
+  }
+
   suppressWarnings({
   # Initialize database connection
   db <- dbConnect(RSQLite::SQLite(), trip.file)

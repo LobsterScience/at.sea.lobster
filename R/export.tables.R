@@ -1,14 +1,19 @@
 
-#' @title export.table
+#' @title export.tables
 #' @import dplyr RSQLite svDialogs
 #' @description Exports tables created by input.trip() as csv files
 #' @export
-export.table <- function(tables = NULL, choose.trip = FALSE, trip = last.trip, trip.dir = dat.dir.global){
+export.tables <- function(tables = NULL, choose.trip = FALSE, trip = last.trip, trip.dir = dat.dir.global){
 
   if(is.null(tables)){
     warning("Error: no tables chosen. Options are: 'fish','trap','set','trip','all'. For multiple tables use tables = c('fish','trap'...).",immediate. = T)
     return(NULL)
-    }
+  }
+
+  if(!any(tables %in% c("all","trip","set","trap","fish"))){
+    warning("Error: No valid table names entered, options are: 'trip','set','trap','fish'")
+    return(NULL)
+  }
 
   trip.file <- paste0(trip.dir,"/",trip,".db")
   trip.name <- trip
