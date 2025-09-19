@@ -954,6 +954,7 @@ suppressWarnings({
           shinyjs::disable(paste0("clutch_", row_id) )
           shinyjs::disable(paste0("vnotch_", row_id) )
           shinyjs::disable(paste0("kept_", row_id) )
+          shinyjs::enable(paste0("abund_", row_id))
           shinyjs::disable(paste0("cull_", row_id) )
         }
 
@@ -1614,6 +1615,7 @@ suppressWarnings({
             updateNumericInput(session, paste0("sex_","row_1"), value = NA)
             updateNumericInput(session, paste0("cond_", "row_1"), value = NA)
             updateNumericInput(session, paste0("kept_", "row_1"), value = NA)
+            updateNumericInput(session, paste0("abund_", row_id), value = 0)
             ## also clear any warnings/messages (use delay to out-wait warnings generated anywhere else)
             delay(5,{
               hideFeedback(paste0("length_", "row_1"))
