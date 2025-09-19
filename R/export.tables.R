@@ -3,7 +3,9 @@
 #' @import dplyr RSQLite svDialogs
 #' @description Exports tables created by input.trip() as csv files
 #' @export
-export.tables <- function(tables = NULL, choose.trip = FALSE, trip = last.trip, trip.dir = dat.dir.global){
+export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FALSE, trip = last.trip, trip.dir = dat.dir.global){
+
+  if(merge.tables){tables = "all"}
 
   if(is.null(tables)){
     warning("Error: no tables chosen. Options are: 'fish','trap','set','trip','all'. For multiple tables use tables = c('fish','trap'...).",immediate. = T)
@@ -27,7 +29,7 @@ export.tables <- function(tables = NULL, choose.trip = FALSE, trip = last.trip, 
   dlg_message("In the following window, choose the directory where you want to store you csv table(s)")
   out.dir <- dlg_dir()$res
 
-  if("all" %in% tables){
+  if("all" %in% tables || merge.tables){
     tables <- c("trip","set","trap","fish")
   }
 
@@ -39,28 +41,47 @@ export.tables <- function(tables = NULL, choose.trip = FALSE, trip = last.trip, 
       query = paste0("SELECT * FROM FISH_INFO")
       fish <- dbSendQuery(db, query)
       fish <- fetch(fish)
-      write.csv(fish, file = paste0(out.dir,"/",trip.name,"_fish.csv"), row.names = F)
+      if(!merge.tables){
+        write.csv(fish, file = paste0(out.dir,"/",trip.name,"_fish.csv"), row.names = F)
+      }
     }
     if("trap" %in% tables){
       query = paste0("SELECT * FROM TRAP_INFO")
       trap <- dbSendQuery(db, query)
       trap <- fetch(trap)
-      write.csv(trap, file = paste0(out.dir,"/",trip.name,"_trap.csv"),row.names = F)
+      if(!merge.tables){
+        write.csv(trap, file = paste0(out.dir,"/",trip.name,"_trap.csv"),row.names = F)
+      }
     }
     if("set" %in% tables){
       query = paste0("SELECT * FROM SET_INFO")
       set <- dbSendQuery(db, query)
       set <- fetch(set)
-      write.csv(set, file = paste0(out.dir,"/",trip.name,"_set.csv"),row.names = F)
+      if(!merge.tables){
+        write.csv(set, file = paste0(out.dir,"/",trip.name,"_set.csv"),row.names = F)
+      }
     }
     if("trip" %in% tables){
       query = paste0("SELECT * FROM TRIP_INFO")
       trip <- dbSendQuery(db, query)
       trip <- fetch(trip)
-      write.csv(trip, file = paste0(out.dir,"/",trip.name,"_trip.csv"),row.names = F)
+      if(!merge.tables){
+        write.csv(trip, file = paste0(out.dir,"/",trip.name,"_trip.csv"),row.names = F)
+      }
     }
 
     dbDisconnect(db)
-  })
+
+    ### if merging to one table
+    if(merge.tables){
+      fish <- fish %>% dplyr::select(-TRAP_NO)
+      fish_trap <- left_join(fish,trap)
+      fish_trap <- fish_trap %>% dplyr::select(-SET_NO)
+      fish_trap_set <- left_join(fish_trap, set)
+      full.tab <- left_join(fish_trap_set, trip)
+      write.csv(full.tab, file = paste0(out.dir,"/",trip.name,"_merged.csv"),row.names = F)
+    }
+
+    })
 
 }

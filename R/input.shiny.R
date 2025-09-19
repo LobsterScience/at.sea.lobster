@@ -882,7 +882,7 @@ suppressWarnings({
         shinyjs::enable(paste0("clutch_", row_id) )
         shinyjs::enable(paste0("vnotch_", row_id) )
         shinyjs::enable(paste0("kept_", row_id) )
-        shinyjs::enable(paste0("abund_", row_id) )
+        shinyjs::disable(paste0("abund_", row_id) )
         shinyjs::enable(paste0("cull_", row_id) )
 
         ### fish type options
@@ -899,13 +899,11 @@ suppressWarnings({
           shinyjs::disable(paste0("egg_", row_id))
           shinyjs::disable(paste0("clutch_", row_id))
           shinyjs::disable(paste0("vnotch_", row_id))
-          shinyjs::disable(paste0("abund_", row_id))
           shinyjs::disable(paste0("cull_", row_id))
         } ## Crustacean
 
         ## if species is lobster
         if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
-          shinyjs::disable(paste0("abund_", row_id))
           if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
             shinyjs::disable(paste0("egg_", row_id))
             shinyjs::disable(paste0("clutch_", row_id))
@@ -928,12 +926,13 @@ suppressWarnings({
           shinyjs::disable(paste0("egg_", row_id) )
           shinyjs::disable(paste0("clutch_", row_id) )
           shinyjs::disable(paste0("vnotch_", row_id) )
+          shinyjs::enable(paste0("abund_", row_id))
           shinyjs::disable(paste0("cull_", row_id) )
         } ##species is abundance only
 
 
         ## If species is Other Fish
-        if(!input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
+        if(!input[[paste0("spec_code_", row_id)]] %in% crust.codes && !input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) && !input[[paste0("spec_code_", row_id)]] %in% abund.species){
           shinyjs::disable(paste0("sex_", row_id) )
           shinyjs::disable(paste0("shell_", row_id))
           shinyjs::disable(paste0("disease_", row_id))
@@ -1085,10 +1084,10 @@ suppressWarnings({
             numericInput(paste0("vnotch_", row_id), "VNOTCH", min = 0, max = 5, value = NA)
         ),
         div(class = "compact-input",
-            selectInput(paste0("kept_", row_id), "KEPT", choices = c("","Y","N"))
+            numericInput(paste0("kept_", row_id), "KEPT (0=N, 1=Y)", value = NA, min = 0, max = 1)
         ),
         div(class = "compact-input",
-            numericInput(paste0("abund_", row_id), "ABUNDANCE", value = NA, min = 0)
+            numericInput(paste0("abund_", row_id), "ABUNDANCE", value = 1, min = 0)
         ),
         div(class = "compact-input",
             numericInput(paste0("cull_", row_id), "CULL", min = 1, max = 3, value = NA)
@@ -1321,7 +1320,7 @@ suppressWarnings({
           updateNumericInput(session, paste0("clutch_",row_id), value = NA)
           updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
           updateNumericInput(session, paste0("kept_",row_id), value = NA)
-          updateNumericInput(session, paste0("abund_",row_id), value = NA)
+          updateNumericInput(session, paste0("abund_",row_id), value = 1)
           updateNumericInput(session, paste0("cull_",row_id), value = NA)
         }
       }else{
@@ -1373,7 +1372,7 @@ suppressWarnings({
           updateNumericInput(session, paste0("clutch_", row_id), value = NA)
           updateNumericInput(session, paste0("vnotch_", row_id), value = NA)
           updateNumericInput(session, paste0("kept_", row_id), value = NA)
-          updateNumericInput(session, paste0("abund_", row_id), value = NA)
+          updateNumericInput(session, paste0("abund_", row_id), value = 1)
           updateNumericInput(session, paste0("cull_", row_id), value = NA)
         })
 
@@ -1404,7 +1403,7 @@ suppressWarnings({
         updateNumericInput(session, paste0("clutch_",row_id), value = NA)
         updateNumericInput(session, paste0("vnotch_",row_id), value = NA)
         updateNumericInput(session, paste0("kept_",row_id), value = NA)
-        updateNumericInput(session, paste0("abund_",row_id), value = NA)
+        updateNumericInput(session, paste0("abund_",row_id), value = 1)
         updateNumericInput(session, paste0("cull_",row_id), value = NA)
       }
     }
@@ -1589,15 +1588,17 @@ suppressWarnings({
           updateNumericInput(session, paste0("sex_",row_id), value = NA)
           updateNumericInput(session, paste0("cond_", row_id), value = NA)
           updateNumericInput(session, paste0("kept_", row_id), value = NA)
-          updateNumericInput(session, paste0("abund_", row_id), value = NA)
+          updateNumericInput(session, paste0("abund_", row_id), value = 1)
         }
+        ## abundance is alway 1 unless it's an abundance onyl species
+        updateNumericInput(session, paste0("abund_", row_id), value = 1)
         ## if non-lobster value entered
         if(!input[[paste0("spec_code_", row_id)]] %in% c(2550,2552)){
 
           ## if it's still a crustacean, clear abundance
-          if(input[[paste0("spec_code_", row_id)]] %in% crust.codes){
-            updateNumericInput(session, paste0("abund_", row_id), value = NA)
-          }
+          # if(input[[paste0("spec_code_", row_id)]] %in% crust.codes){
+          #   updateNumericInput(session, paste0("abund_", row_id), value = 1)
+          # }
 
           ## need to clear any disabled fields if theres already values in them
           updateNumericInput(session, paste0("egg_", row_id), value = NA)
@@ -1634,7 +1635,6 @@ suppressWarnings({
                 updateNumericInput(session, paste0("clutch_", row_id), value = NA)
                 updateNumericInput(session, paste0("vnotch_", row_id), value = NA)
                 updateNumericInput(session, paste0("kept_", row_id), value = NA)
-                updateNumericInput(session, paste0("abund_", row_id), value = NA)
                 updateNumericInput(session, paste0("cull_", row_id), value = NA)
               }
             })
@@ -1645,11 +1645,10 @@ suppressWarnings({
               updateNumericInput(session, paste0("length_", row_id), value = NA)
               updateNumericInput(session, paste0("sex_", row_id), value = NA)
               updateNumericInput(session, paste0("cond_", row_id), value = NA)
+              updateNumericInput(session, paste0("abund_", row_id), value = NA)
             }
           }
         }else{ ## is a lobster
-          updateNumericInput(session, paste0("abund_", row_id), value = NA)
-
            if(input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) & !input[[paste0("sex_", row_id)]] %in% c(2,3)){
 
           updateNumericInput(session, paste0("egg_", row_id), value = NA)
@@ -2778,10 +2777,10 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
         hideFeedback(paste0("kept_", row_id))
         checks$check41 <- T
         req(input[[paste0("kept_", row_id)]])
-        # if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
-        #   showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
-        #   checks$check41 <- F
-        # }
+        if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
+          showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
+          checks$check41 <- F
+        }
         if(input[[paste0("kept_", row_id)]] %in% "Y"){  ## if lobster is being recorded as kept, there may be various warnings for prohibitions:
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"")
