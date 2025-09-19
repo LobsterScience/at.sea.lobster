@@ -3,7 +3,9 @@
 #' @import dplyr RSQLite svDialogs
 #' @description Exports tables created by input.trip() as csv files
 #' @export
-export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FALSE, trip = last.trip, trip.dir = dat.dir.global){
+export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FALSE,
+                           trip.dir = if(exists("dat.dir.global")) dat.dir.global else NULL,
+                        trip = if(exists("last.trip")) last.trip else NULL){
 
   if(merge.tables){tables = "all"}
 
@@ -17,8 +19,10 @@ export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FAL
     return(NULL)
   }
 
-  trip.file <- paste0(trip.dir,"/",trip,".db")
-  trip.name <- trip
+  if(!is.null(trip)){
+    trip.file <- paste0(trip.dir,"/",trip,".db")
+    trip.name <- trip
+  }
 
   if(choose.trip){
     dlg_message(paste0("In the following window, select the .db trip file you want to generate ",paste(tables, collapse = ", ")," tables from."))
