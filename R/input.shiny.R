@@ -883,7 +883,7 @@ suppressWarnings({
         shinyjs::enable(paste0("vnotch_", row_id) )
         shinyjs::enable(paste0("kept_", row_id) )
         shinyjs::disable(paste0("abund_", row_id) )
-        shinyjs::enable(paste0("cull_", row_id) )
+        shinyjs::disable(paste0("cull_", row_id) )  ## fully disabled, only CBFH uses it. Just need to change to enable on this line if you want to renable for lobster
 
         ### fish type options
         ## 1. Crustacean (not lobster)
@@ -2783,7 +2783,7 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
           showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
           checks$check41 <- F
         }
-        if(input[[paste0("kept_", row_id)]] %in% "Y"){  ## if lobster is being recorded as kept, there may be various warnings for prohibitions:
+        if(input[[paste0("kept_", row_id)]] %in% 1){  ## if lobster is being recorded as kept, there may be various warnings for prohibitions:
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"")
              && input[[paste0("length_", row_id)]] < lfa.data$MLS[which(lfa.data$LFA %in% input$lfa)]){
@@ -2808,6 +2808,12 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
              input$lfa %in% "L30" && input[[paste0("length_", row_id)]]>135 &&
              input[[paste0("sex_", row_id)]] %in% c(2,3)){
             showFeedbackWarning(paste0("kept_", row_id), "Warning!: Retaining female lobster greater than 135 mm is prohibited in LFA 30.")
+          }
+          # 41:5 shouldn't be kept if berried
+          if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
+             input[[paste0("sex_", row_id)]] %in% c(3)){
+            hideFeedback(paste0("kept_", row_id))
+           showFeedbackWarning(paste0("kept_", row_id), "Warning!: You are recording retaining a berried female. This is illegal.")
           }
         }
       }, ignoreInit = T)
