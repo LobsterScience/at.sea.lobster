@@ -12,7 +12,7 @@ Exporting Data as CSV:
 
 
 
-The data is meant to be maintained in SQL format (the .db files) for integration with the central database. However, if the user needs csv files of the data tables they can easily create them with the export.tables() function. Like check.table(), this function defaults to the last trip file edited in input.trip() but if the user wants to manually choose a trip file, they can use the choose.trip argument (example: export.tables("fish", choose.trip = T) ). To export multiple tables set tables = c('fish','trap'...) or to export all 4 tables for the chosen trip, set tables = "all"  
+The data is meant to be maintained in SQL format (the .db files) for integration with the central database. However, if the user needs csv files of the data tables they can easily create them with the export.tables() function. Like check.table(), this function defaults to the last trip file edited in input.trip() but if the user wants to manually choose a trip file, they can use the choose.trip argument (example: export.tables("fish", choose.trip = T) ). To export multiple tables set tables = c('fish','trap'...) or to export all 4 tables for the chosen trip, set tables = "all". To export the data as a single merged table (all 4 tables merged into one for a given trip) use export.tables(merge.tables = T)
 
 
 
