@@ -547,7 +547,7 @@ suppressWarnings({
   data <- NULL
   for (row_id in row_ids()) {
 
-    fish_num <- gsub("\\D", "", row_id)
+    fish_num <- as.numeric(gsub("\\D", "", row_id))
 
     data.row <- data.frame(
       trap.id = trap.id,
@@ -572,13 +572,14 @@ suppressWarnings({
   }
 
   ## specific edits to data before upload
-  data <- data %>% filter(!species_code %in% NA) ### remove last unfilled row where species code wasn't added
+  data <- data %>% filter(!species_code %in% NA) %>% arrange(fish_num) ### remove last unfilled row where species code wasn't added and make sure table is sorted by fish number (will be the same as row number)
 
     # Insert data into the database (upload if no existing fish, update if fish found)
     checkfish <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     fish.result <- dbGetQuery(db, checkfish)
-    fish.result <- fish.result %>% arrange(FISH_NO) ## make sure fish data is sorted by fish number (because this is equivalent to row# in the app)
+    fish.result <- fish.result %>% arrange(as.numeric(FISH_NO)) ## make sure fish data is sorted by fish number (because this is equivalent to row# in the app)
     if(nrow(fish.result)==0){
+      print(paste0("No previously existing fish rows found. Adding ",nrow(data)," fish"))
     data[data == ""] <- NA
     colnames(data) = fish_columns
     if(nrow(data)>0){
@@ -589,6 +590,8 @@ suppressWarnings({
     if(nrow(fish.result)>0){
       data[data == ""] <- NA
       if(nrow(data)>0){
+        new.rows <- nrow(data)-nrow(fish.result)
+        print(paste0("Previously existing fish rows found. Adding ",new.rows," new fish, ","updating ",nrow(fish.result)," existing fish rows"))
         for(i in 1:nrow(fish.result)){
           update_query <- paste("
     UPDATE FISH_INFO
@@ -1721,7 +1724,6 @@ suppressWarnings({
 
             dbDisconnect(db)
 
-            ## move to next trap number
             updateNumericInput(session, "trap_num", value = input$trap_num+1)
           })
         }
