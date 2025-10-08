@@ -1,6 +1,6 @@
 
 #' @title export.tables
-#' @import dplyr RSQLite svDialogs
+#' @import dplyr tidyr RSQLite svDialogs
 #' @description Exports tables created by input.trip() as csv files
 #' @export
 export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FALSE,
@@ -45,6 +45,10 @@ export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FAL
       query = paste0("SELECT * FROM FISH_INFO")
       fish <- dbSendQuery(db, query)
       fish <- fetch(fish)
+      ## sort rows before exporting
+      fish <- fish %>% separate(TRAP_ID, into = c("part1", "part2", "num1", "num2"), sep = "_", remove = FALSE, convert = TRUE) %>%
+        arrange(num1, num2, as.numeric(TRAP_NO), as.numeric(FISH_NO))
+      fish <- fish %>% dplyr::select(-part1,-part2,-num1,-num2)
       if(!merge.tables){
         write.csv(fish, file = paste0(out.dir,"/",trip.name,"_fish.csv"), row.names = F)
       }
@@ -53,6 +57,7 @@ export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FAL
       query = paste0("SELECT * FROM TRAP_INFO")
       trap <- dbSendQuery(db, query)
       trap <- fetch(trap)
+      trap <- trap %>% arrange(as.numeric(SET_NO), as.numeric(TRAP_NO))
       if(!merge.tables){
         write.csv(trap, file = paste0(out.dir,"/",trip.name,"_trap.csv"),row.names = F)
       }
@@ -61,6 +66,7 @@ export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FAL
       query = paste0("SELECT * FROM SET_INFO")
       set <- dbSendQuery(db, query)
       set <- fetch(set)
+      set <- set %>% arrange(as.numeric(SET_NO))
       if(!merge.tables){
         write.csv(set, file = paste0(out.dir,"/",trip.name,"_set.csv"),row.names = F)
       }

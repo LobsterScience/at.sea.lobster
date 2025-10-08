@@ -1,6 +1,6 @@
 
 #' @title check.table
-#' @import dplyr RSQLite
+#' @import dplyr tidyr RSQLite
 #' @description opens and views SQL tables created by input.trip()
 #' @export
 check.table <- function(table = "default", choose.trip = FALSE,
@@ -30,6 +30,10 @@ check.table <- function(table = "default", choose.trip = FALSE,
     fish <- dbSendQuery(db, query)
     fish <- fetch(fish)
     dbDisconnect(db)
+    ## sort rows before viewing
+    fish <- fish %>% separate(TRAP_ID, into = c("part1", "part2", "num1", "num2"), sep = "_", remove = FALSE, convert = TRUE) %>%
+      arrange(num1, num2, as.numeric(TRAP_NO), as.numeric(FISH_NO))
+    fish <- fish %>% dplyr::select(-part1,-part2,-num1,-num2)
     View(fish)
   }
   if(table %in% "trap"){
@@ -37,6 +41,7 @@ check.table <- function(table = "default", choose.trip = FALSE,
     trap <- dbSendQuery(db, query)
     trap <- fetch(trap)
     dbDisconnect(db)
+    trap <- trap %>% arrange(as.numeric(SET_NO), as.numeric(TRAP_NO))
     View(trap)
   }
   if(table %in% "set"){
@@ -44,6 +49,7 @@ check.table <- function(table = "default", choose.trip = FALSE,
     set <- dbSendQuery(db, query)
     set <- fetch(set)
     dbDisconnect(db)
+    set <- set %>% arrange(as.numeric(SET_NO))
     View(set)
   }
   if(table %in% c("trip","default")){

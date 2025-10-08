@@ -547,7 +547,7 @@ suppressWarnings({
   data <- NULL
   for (row_id in row_ids()) {
 
-    fish_num <- as.numeric(gsub("\\D", "", row_id))
+    fish_num <- round(as.numeric(gsub("\\D", "", row_id)))
 
     data.row <- data.frame(
       trap.id = trap.id,
@@ -573,6 +573,7 @@ suppressWarnings({
 
   ## specific edits to data before upload
   data <- data %>% filter(!species_code %in% NA) %>% arrange(fish_num) ### remove last unfilled row where species code wasn't added and make sure table is sorted by fish number (will be the same as row number)
+  data <- data %>% mutate(fish_num = as.character(fish_num)) ## convert back to character for upload
 
     # Insert data into the database (upload if no existing fish, update if fish found)
     checkfish <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
@@ -614,7 +615,7 @@ suppressWarnings({
           dbExecute(db, update_query)
         }
         ## then need to add any new additional rows of data that aren't in the database
-        data.add <- data %>% filter(fish_num > nrow(fish.result))
+        data.add <- data %>% filter(as.numeric(fish_num) > nrow(fish.result))
         if(nrow(data.add)>0){
           colnames(data.add) = fish_columns
           dbWriteTable(db, "FISH_INFO", data.add, append = TRUE, row.names = FALSE)
@@ -745,6 +746,7 @@ suppressWarnings({
     bdate <- as.character(input$board_date) ## ensure dates get uplaoded as strings
     if(length(input$land_date)>0){ldate <- as.character(input$land_date)}else{ldate <- NA}
     if(length(input$entry_date)>0){edate <- as.character(input$entry_date)}else{edate <- NA}
+    if(!is.na(input$license_num)){lic_num <- sprintf("%06d",input$license_num)}else{lic_num <- NA}
     if(nrow(trip.result)==0){
       trip.dat <- data.frame(
         trip.id,
@@ -752,7 +754,7 @@ suppressWarnings({
         input$entry_group,
         input$vessel_name,
         sprintf("%06d",input$vessel_num), ## ensure leading zeros
-        sprintf("%06d",input$license_num),
+        lic_num,
         port = NA,
         bdate,
         ldate,
@@ -775,7 +777,7 @@ suppressWarnings({
     SET OWNER_GROUP = '", input$entry_group, "',
         VESSEL_NAME = '", input$vessel_name, "',
         VESSEL_NO = '", sprintf("%06d",input$vessel_num), "',
-        LICENSE_NO = '", sprintf("%06d",input$license_num), "',
+        LICENSE_NO = '", lic_num, "',
         BOARD_DATE = '", input$board_date, "',
         LANDING_DATE = '", input$land_date, "',
         SAMPLER_NAME = '", input$sampler_name, "',

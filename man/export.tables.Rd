@@ -7,8 +7,9 @@
 export.tables(
   tables = NULL,
   choose.trip = FALSE,
-  trip = last.trip,
-  trip.dir = dat.dir.global
+  merge.tables = FALSE,
+  trip.dir = if (exists("dat.dir.global")) dat.dir.global else NULL,
+  trip = if (exists("last.trip")) last.trip else NULL
 )
 }
 \description{

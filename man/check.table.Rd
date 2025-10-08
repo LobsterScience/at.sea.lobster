@@ -6,9 +6,9 @@
 \usage{
 check.table(
   table = "default",
-  dat.dir = dat.dir.global,
-  trip = last.trip,
-  trip.file = paste0(dat.dir, "/", trip, ".db")
+  choose.trip = FALSE,
+  dat.dir = if (exists("dat.dir.global")) dat.dir.global else NULL,
+  trip = if (exists("last.trip")) last.trip else NULL
 )
 }
 \description{
