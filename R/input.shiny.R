@@ -747,22 +747,39 @@ suppressWarnings({
     if(length(input$land_date)>0){ldate <- as.character(input$land_date)}else{ldate <- NA}
     if(length(input$entry_date)>0){edate <- as.character(input$entry_date)}else{edate <- NA}
     if(!is.na(input$license_num)){lic_num <- sprintf("%06d",input$license_num)}else{lic_num <- NA}
+
+    ## clean special characters (apostrophes etc. in names)
+    escape_special_chars <- function(x) {
+      if (is.character(x)) {
+        # Escape single quotes (') and dashes (-) for Oracle
+        x <- gsub("'", "''", x)
+        x <- gsub("-", "\\-", x)
+      }
+      return(x)
+    }
+
+    vessel_name <- escape_special_chars(input$vessel_name)
+    sampler_name <- escape_special_chars(input$sampler_name)
+    captain_name <- escape_special_chars(input$captain_name)
+    entry_name <- escape_special_chars(input$entry_name)
+
+
     if(nrow(trip.result)==0){
       trip.dat <- data.frame(
         trip.id,
         input$trip_code,
         input$entry_group,
-        input$vessel_name,
+        vessel_name,
         sprintf("%06d",input$vessel_num), ## ensure leading zeros
         lic_num,
         port = NA,
         bdate,
         ldate,
-        input$sampler_name,
+        sampler_name,
         input$lfa,
-        input$captain_name,
+        captain_name,
         marfis.lic = NA,
-        input$entry_name,
+        entry_name,
         edate
 
       )
@@ -775,15 +792,15 @@ suppressWarnings({
       update_query <- paste("
     UPDATE TRIP_INFO
     SET OWNER_GROUP = '", input$entry_group, "',
-        VESSEL_NAME = '", input$vessel_name, "',
+        VESSEL_NAME = '", vessel_name, "',
         VESSEL_NO = '", sprintf("%06d",input$vessel_num), "',
         LICENSE_NO = '", lic_num, "',
         BOARD_DATE = '", input$board_date, "',
         LANDING_DATE = '", input$land_date, "',
-        SAMPLER_NAME = '", input$sampler_name, "',
+        SAMPLER_NAME = '", sampler_name, "',
         COMAREA_ID = '", input$lfa, "',
-        CAPTAIN = '", input$captain_name, "',
-        CREATED_BY = '", input$entry_name, "',
+        CAPTAIN = '", captain_name, "',
+        CREATED_BY = '", entry_name, "',
         CREATED_DATE = '", input$entry_date, "'
     WHERE TRIP_ID = '", trip.id, "'", sep = "")
 
