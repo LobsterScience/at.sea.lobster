@@ -24,7 +24,7 @@ Creating / Finding a Trip:
 
 
 
-To start a new trip, enter input.trip() in your R console, after choosing a folder to put your trip data file in, this will open the data entry GUI. You must first enter the Boarding Date and Vessel Registration Number (VRN) then click the Create/Find Trip button to begin entering data for your trip (if the folder you chose already contains a trip data file with this info, then the trip will be accessed to continue editing).
+To start a new trip, enter input.trip() in your R console. After choosing a folder to put your trip data file in, this will open the data entry GUI. You must first enter the Boarding Date and Vessel Registration Number (VRN) then click the Create/Find Trip button to begin entering data for your trip (if the folder you chose already contains a trip data file with this info, then the trip will be accessed to continue editing).
 
 
 
