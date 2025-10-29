@@ -2667,6 +2667,7 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
       observeEvent(list(input[[paste0("shell_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
         range35 <- c(1,2,3,4,5,6,7)
         if(!input[[paste0("shell_", row_id)]] %in% c(NULL,NA,range35)){
+          hideFeedback(paste0("shell_", row_id))
           showFeedbackDanger(paste0("shell_", row_id), paste0("Shell Hardness range is ",paste0(range35, collapse = ",")))
           checks$check35<- F
         }else{
@@ -2794,49 +2795,88 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
       }, ignoreInit = T)
 
       ## 41 Kept
-      ## 41:1 Range + Shouldn't be kept if length < MLS
+      ## Range + shouldn't be kept if other conditions are met
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]], input[[paste0("kept_", row_id)]], input[[paste0("length_", row_id)]], input$lfa,
                         input[[paste0("vnotch_", row_id)]]),{
+
         hideFeedback(paste0("kept_", row_id))
         checks$check41 <- T
-        req(input[[paste0("kept_", row_id)]])
+        checked = 0
+        should.be.kept = T
+
+        ## range
         if(!input[[paste0("kept_", row_id)]] %in% c(NULL,NA,0,1)){
           showFeedbackDanger(paste0("kept_", row_id), "Allowed values are 0 (not kept) or 1 (kept)")
           checks$check41 <- F
         }
-        if(input[[paste0("kept_", row_id)]] %in% 1){  ## if lobster is being recorded as kept, there may be various warnings for prohibitions:
+
+        ### SHOULD NOT be kept conditions:
+        ## 41:1 Shouldn't be kept if length < MLS
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"")
              && input[[paste0("length_", row_id)]] < lfa.data$MLS[which(lfa.data$LFA %in% input$lfa)]){
-            showFeedbackWarning(paste0("kept_", row_id), "Warning!: you are recording retaining a lobster below Minimum Legal Size for chosen LFA")
+            warn.mess <- "Warning!: you are recording retaining a lobster below Minimum Legal Size for chosen LFA"
+            should.be.kept = F
           }
           ## 41:2 shouldn't be kept if vnotched in prohibited LFAs
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              !input[[paste0("vnotch_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
              input$lfa %in% lfa.data$LFA[which(!lfa.data$vnotch.rule %in% "none")]){
-            showFeedbackWarning(paste0("kept_", row_id), "Warning!: There are restrictions for retaining V-notched lobster in chosen LFA. Check specific regulations.")
+            warn.mess <- "Warning!: There are restrictions for retaining V-notched lobster in chosen LFA. Check specific regulations."
+            should.be.kept = F
           }
           ## 41:3 shouldn't be kept if female between 114-124mm in LFA 31A
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
              input$lfa %in% "L31A" && input[[paste0("length_", row_id)]]>=114 && input[[paste0("length_", row_id)]]<=124 &&
              input[[paste0("sex_", row_id)]] %in% c(2,3)){
-            showFeedbackWarning(paste0("kept_", row_id), "Warning!: Retaining female lobster between 114 and 124 mm is prohibited in LFA 31A.")
+            warn.mess <- "Warning!: Retaining female lobster between 114 and 124 mm is prohibited in LFA 31A."
+            should.be.kept = F
           }
           ## 41:4 shouldn't be kept if female > 135 in LFA30
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              !input[[paste0("length_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
              input$lfa %in% "L30" && input[[paste0("length_", row_id)]]>135 &&
              input[[paste0("sex_", row_id)]] %in% c(2,3)){
-            showFeedbackWarning(paste0("kept_", row_id), "Warning!: Retaining female lobster greater than 135 mm is prohibited in LFA 30.")
+            warn.mess <- "Warning!: Retaining female lobster greater than 135 mm is prohibited in LFA 30."
+            should.be.kept = F
           }
           # 41:5 shouldn't be kept if berried
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
              input[[paste0("sex_", row_id)]] %in% c(3)){
+            warn.mess <- "Warning!: You are recording retaining a berried female. This is illegal."
+           should.be.kept = F
+          }
+
+
+        ## if lobster is being recorded as kept when it shoudln't be for any reason:
+        if(!should.be.kept){
+          if(input[[paste0("kept_", row_id)]] %in% 1){
             hideFeedback(paste0("kept_", row_id))
-           showFeedbackWarning(paste0("kept_", row_id), "Warning!: You are recording retaining a berried female. This is illegal.")
+            showFeedbackWarning(paste0("kept_", row_id), warn.mess)
           }
         }
+
+        ## 41:6 if is a lobster and all required fields to check keepability have values but still no recorded as kept:
+        if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
+           !input$lfa %in% c(NULL,NA,"") && !input[[paste0("sex_", row_id)]] %in% c(NULL,NA) && !input[[paste0("length_", row_id)]] %in% c(NULL,NA)){
+
+          if(should.be.kept){ ## kept conditions have all passed
+            #  double check if a legal animal blank for kept
+            if(is.na(input[[paste0("kept_", row_id)]]) | is.null(input[[paste0("kept_", row_id)]])){
+              hideFeedback(paste0("kept_", row_id))
+              showFeedbackWarning(paste0("kept_", row_id), "Was this legal animal kept?")
+            }
+            # double check if legal animal is being marked as not kept
+            if(input[[paste0("kept_", row_id)]] %in% 0){
+              hideFeedback(paste0("kept_", row_id))
+              showFeedbackWarning(paste0("kept_", row_id), "Sure this legal animal wasn't kept?")
+            }
+          }
+
+        }
+
+
       }, ignoreInit = T)
 
       ## 42 Abundance
