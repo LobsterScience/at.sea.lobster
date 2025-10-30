@@ -434,12 +434,13 @@ fluidRow(
   div(
     class = "title-with-button",
     div(class = "title-panel", titlePanel("SET INFO")),  # Wrap the title in title-panel div
-    column(12, align = "right",  ### arrow button
-           tags$div(
-             class = "arrow-button arrow-left",
-             id = "set_back_btn"
-           )
-    ),
+    # column(12, align = "right",  ### arrow button
+    #        tags$div(
+    #          class = "arrow-button arrow-left",
+    #          id = "set_back_btn"
+    #        )
+    # ),
+    actionButton("prev_set", "Save and Previous Set"),
     actionButton("next_set", "Save and Next Set")
   )
 ),
@@ -448,8 +449,8 @@ fluidRow(
 div(class = "compact-row",
     div(class= "compact-input", numericInput("set_num", "SET / TRAWL / STRING#",value = NA, min = 0)),
     div(class= "compact-input", numericInput("num_traps", "#TRAPS IN SET",value = NA, min = 0)),
-    div(class = "mediumwide-input", numericInput("lat", "LATITUDE (DDMM.MM)", value = NULL, max = 9059.99, min = -9059.99, step = 0.01)),
-    div(class = "mediumwide-input", numericInput("lon", "LONGITUDE (DDMM.MM)", value = NULL, max = 18059.99, min = -18059.99, step = 0.01)),
+    div(class = "mediumwide-input", numericInput("lat", "LATITUDE (DDMM.MM)", value = NA, max = 9059.99, min = -9059.99, step = 0.01)),
+    div(class = "mediumwide-input", numericInput("lon", "LONGITUDE (DDMM.MM)", value = NA, max = 18059.99, min = -18059.99, step = 0.01)),
     div(class= "compact-input", numericInput("grid_num", "GRID NO", value = NA)),
     div(class= "compact-input", numericInput("depth", "DEPTH (FM)", value = NA, min = 0, max = 300)),
     div(class= "compact-input", numericInput("soak_days", "SOAK DAYS", value = NA, min = 0, max = 30)),
@@ -471,13 +472,13 @@ fluidRow(
   div(
     class = "title-with-button",
     div(class = "title-panel", titlePanel(HTML("<span style='font-size: 24px;'> TRAP INFO</span> <span style='font-size: 16px;'>*Only traps with bait codes are submitted when you hit Next...</span>"))),  # Wrap the title in title-panel div
-    column(12, align = "right",  ### arrow button
-           tags$div(
-             class = "arrow-button arrow-left",
-             id = "trap_back_btn"
-           )
-    ),
-    actionButton("next_trap", "Save and Next Trap")
+    # column(12, align = "right",  ### arrow button
+    #        tags$div(
+    #          class = "arrow-button arrow-left",
+    #          id = "trap_back_btn"
+    #        )
+    # ),
+    actionButton("next_trap", "Save and New Trap")
   )
 ),
 
@@ -1060,6 +1061,13 @@ suppressWarnings({
   # Reactive values to store row data
   row_data <- reactiveValues(data = list())
 
+  ## reactive vals for if any fish, trap or set data has changed and not been saved
+  unsaved.fish <- reactiveVal(F)
+  unsaved.set <- reactiveVal(F)
+  check.set.save <- reactiveVal(F)
+  check.fish.save <- reactiveVal(F)
+
+
   ## reactive value for fish table every time new fish data is retrieved from the database (to activate filling in of GUI rows)
   new.fish.data <- reactiveVal(NULL)
   rerun.fish <- reactiveVal(0)  ## for looping to check if fish row number is right before filling with data
@@ -1284,17 +1292,21 @@ suppressWarnings({
     ## whenever the set # is changed, Set trap # to 1 which will cause cascade down to autofill any existing data for first trap
     ## unless the field is just cleared, in which case clear trap # too
     ## Make sure it always changes from a different(with delay) to trigger reset of downstream values
-    if(is.na(input$set_num)){
-      updateNumericInput(session, "trap_num", value = 1)
-      delay(5, {
-        updateNumericInput(session, "trap_num", value = NA)
-      })
-    }else{
-      updateNumericInput(session, "trap_num", value = NA)
-      delay(5, {
-        updateNumericInput(session, "trap_num", value = 1)
-      })
-    }
+    # if(is.na(input$set_num)){
+    #   updateNumericInput(session, "trap_num", value = 1)
+    #   delay(5, {
+    #     updateNumericInput(session, "trap_num", value = NA)
+    #   })
+    # }else{
+    #   updateNumericInput(session, "trap_num", value = NA)
+    #   delay(5, {
+    #     updateNumericInput(session, "trap_num", value = 1)
+    #   })
+    # }
+
+    ## User request, just clearn Trap Number anytime Set is changed so user has to input this (don't need above code)
+
+    updateNumericInput(session, "trap_num", value = NA)
 
   }, ignoreInit = TRUE)
 
@@ -1743,7 +1755,7 @@ suppressWarnings({
 
             dbDisconnect(db)
 
-            updateNumericInput(session, "trap_num", value = input$trap_num+1)
+            updateNumericInput(session, "trap_num", value = NA)
           })
         }
 
@@ -1753,15 +1765,15 @@ suppressWarnings({
 
 
   ## When back button for trap clicked  (inverse of next trap) ## going backwards doesn't update database, just check for existing data to fill fields
-  observeEvent(input$trap_back_btn, {
-
-    if(!is.na(input$trap_num) & input$trap_num>0){
-      updateNumericInput(session, "trap_num", value = input$trap_num-1)
-    }
-    # if(input$trap_num==0){
-    #   trap.max <- paste("SELECT MAX(TRAP_NO) AS MAX_TRAP_NO FROM TRAP_INFO WHERE FISHSET_ID = ","'",set.id,"'", sep = "")
-    # }
-  }) ## observeEvent block
+  # observeEvent(input$trap_back_btn, {
+  #
+  #   if(!is.na(input$trap_num) & input$trap_num>0){
+  #     updateNumericInput(session, "trap_num", value = input$trap_num-1)
+  #   }
+  #   # if(input$trap_num==0){
+  #   #   trap.max <- paste("SELECT MAX(TRAP_NO) AS MAX_TRAP_NO FROM TRAP_INFO WHERE FISHSET_ID = ","'",set.id,"'", sep = "")
+  #   # }
+  # }) ## observeEvent block
 
   ## When 'Delete Trap' button is clicked (need this option to remove any traps wrongly created)
   observeEvent(input$delete_trap, {
@@ -1879,10 +1891,59 @@ suppressWarnings({
   })
 
   ## back button for set clicked (inverse operation of next set button) ## Going backwards does not update database
-  observeEvent(input$set_back_btn, {
+  observeEvent(input$prev_set, {
 
-    if(!is.na(input$set_num) & input$set_num>0){
-      updateNumericInput(session, "set_num", value = input$set_num-1)
+    ## going backwards for Set has same saving effect as going forward
+
+    ## define IDs for relational columns
+    set.id <- NULL
+    trap.id <- NULL
+    trip.id <- trip.id()
+    continue = T
+    if(is.null(trip.id)){
+      warning("No TRIP ID Found!")
+      showNotification("No TRIP ID FOUND!", type = "error")
+      continue = F
+    }
+    if(continue){
+      if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){set.id <- paste0(trip.id(),"_",input$set_num)
+      }else{
+        warning("No Set ID Found!")
+        showNotification("No SET ID FOUND!", type = "error")
+        continue = F
+      }
+    }
+    if(continue){
+      if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+      }else{
+        ## warning("No Trap ID Found!")
+        ## continue = F
+      }
+    }
+
+    if(continue){
+      delay(10, {
+        # Initialize database connection
+        db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
+
+        ## update upstream data
+        update.trip(db, trip.id)
+        ## Update downstream data
+        update.set(db, trip.id = trip.id, set.id = set.id)
+        if(!is.null(trap.id)){         ## vv downstream
+          if(!is.na(input$bait_code) && !is.null(input$bait_code)){ ## don't upload blank traps
+            update.trap(db,set.id = set.id, trap.id = trap.id)
+            update.fish(db, trap.id = trap.id)
+          }
+        }
+
+        dbDisconnect(db)
+
+        if(!is.na(input$set_num) & input$set_num>0){
+          updateNumericInput(session, "set_num", value = input$set_num-1)
+        }
+
+      })
     }
 
   })
@@ -2173,7 +2234,7 @@ suppressWarnings({
 ########## SET ROW
 
 ## 13 Set/Trawl/String
-## 13:1 Range >=0 (violation impossible)
+## 13:1 Range >=0 (violation impossible) and give warning if there are any unsaved downstream changes
   observe({
     runjs('
     $("#set_num").on("input", function() {
@@ -2184,6 +2245,69 @@ suppressWarnings({
     });
   ')
   })
+
+  ## 13:2 give warning if set data has changed since the last save
+  observeEvent(list(input$num_traps, input$lat,input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents, unsaved.fish()),{
+    #check.set.save(F)
+    unsaved.set(F)
+    if(!unsaved.fish()){
+      hideFeedback("set_num")
+
+    trip.id <- trip.id()
+    if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
+      set.id <- paste0(trip.id(),"_",input$set_num)
+      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
+      check.this.set <- paste("SELECT * FROM SET_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
+      cs <- dbGetQuery(db, check.this.set)
+      if(nrow(cs)>0){
+
+        ## in case any non proper NA values get in through data table, clean these to NA to avoid crashing
+        cs[] <- lapply(cs, function(x) {
+          # Convert factors to character first to avoid level issues
+          if (is.factor(x)) x <- as.character(x)
+
+          # Replace empty strings, "NA", or "NULL" with proper NA
+          x[x %in% c("", "NA", "NULL")] <- NA
+
+          return(x)
+        })
+
+        is_different <- function(a, b) {
+
+          ## check if one value is missing
+          if (is.na(a) && is.na(b)) return(FALSE)
+          if (is.na(a) && !is.na(b)) return(TRUE)
+          if (!is.na(a) && is.na(b)) return(TRUE)
+
+          # Otherwise, se if values are the same
+          return(a != b)
+        }
+
+        # Now use it cleanly:
+        if (is_different(input$num_traps,  cs$NUM_TRAPS))   unsaved.set(TRUE)
+        if (is_different(input$lat,        cs$LATDDMM))    unsaved.set(TRUE)
+        if (is_different(input$lon,        cs$LONGDDMM))   unsaved.set(TRUE)
+        if (is_different(input$grid_num,   cs$STRATUM_ID))  unsaved.set(TRUE)
+        if (is_different(input$depth,      cs$DEPTH))       unsaved.set(TRUE)
+        if (is_different(input$soak_days,  cs$SOAK_DAYS))   unsaved.set(TRUE)
+        if (is_different(input$trap_type,  cs$TRAP_TYPE))   unsaved.set(TRUE)
+        if (is_different(input$vent_size,  cs$VENT_CD))     unsaved.set(TRUE)
+        if (is_different(input$num_vents,  cs$NUM_VENTS))   unsaved.set(TRUE)
+
+      }
+
+      dbDisconnect(db)
+    }
+
+    if(unsaved.set()){
+      showFeedbackWarning("set_num", "There are unsaved data for this set! Save before changing.", color = "purple")
+    }
+
+    }
+
+  }, ignoreInit = TRUE)
+
+
 
 ## 14 #Traps in Set
 ## 14:1 Range >=0 (violation impossible)
@@ -2395,7 +2519,7 @@ observe({
 
 
 ## 23 Trap No
-## 23:1 range >=0 (Violation impossible) and < #traps in set. And must have value if downstream fields have values (can rely on bait cd and spec code)
+## 23:1 range >=0 (Violation impossible). And must have value if downstream fields have values (can rely on bait cd and spec code)
 observe({
   runjs('
     $("#trap_num").on("input", function() {
@@ -2412,16 +2536,97 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
   if(is.na(input$trap_num) & (!input$bait_code %in% c(NULL,NA,"") | !input$spec_code_row_1 %in% c(NULL,NA,""))){
     showFeedbackDanger("trap_num", "Error: No Trap Number Selected")
     checks$check23 <- F
-  }else{
-    if(!input$trap_num %in% c(NULL,NA) && !input$num_traps %in% c(NULL,NA)){
-      if(input$trap_num>input$num_traps){
-        showFeedbackWarning("trap_num", "Trap number is higher than #Traps in Set")
-        checks$check23 <- T
-      }
-    }
   }
+  # else{
+  #   if(!input$trap_num %in% c(NULL,NA) && !input$num_traps %in% c(NULL,NA)){
+  #     if(input$trap_num>input$num_traps){
+  #       showFeedbackWarning("trap_num", "Trap number is higher than #Traps in Set")
+  #       checks$check23 <- T
+  #     }
+  #   }
+  # }
 }, ignoreInit = T)
 
+## 23: 2 Give warning if there's new unsaved downstream data
+
+        ## for fish rows
+observe({
+
+  current_rows <- row_ids()
+  delay(1000,{
+  lapply(current_rows, function(row_id) {
+            observeEvent(list(input[[paste0("spec_code_", row_id)]], input[[paste0("common_", row_id)]], input[[paste0("length_", row_id)]],
+                              input[[paste0("sex_", row_id)]], input[[paste0("shell_", row_id)]], input[[paste0("cond_", row_id)]],
+                              input[[paste0("disease_", row_id)]], input[[paste0("egg_", row_id)]], input[[paste0("clutch_", row_id)]],
+                              input[[paste0("vnotch_", row_id)]], input[[paste0("kept_", row_id)]], input[[paste0("abund_", row_id)]],
+                              input[[paste0("cull_", row_id)]]), {
+            unsaved.fish(F)
+            hideFeedback("trap_num")
+            hideFeedback("set_num")
+
+            row.num <- as.numeric(gsub("\\D", "", row_id))
+            trip.id <- trip.id()
+            set.id <- NULL
+            if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
+              set.id <- paste0(trip.id(),"_",input$set_num)
+              }
+              if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){
+                trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+
+                db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
+                check.fish.table <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
+                check.fish.result <- dbGetQuery(db, check.fish.table)
+                cf <- check.fish.result %>% arrange(as.numeric(FISH_NO)) ## make sure fish data is sorted by fish number (because this is equivalent to row# in the app)
+
+
+            if(nrow(cf)>0){
+              ## in case any non proper NA values get in through data table, clean these to NA to avoid crashing
+              cf[] <- lapply(cf, function(x) {
+                if (is.factor(x)) x <- as.character(x)
+                x[x %in% c("", "NA", "NULL")] <- NA
+                return(x)
+              })
+
+              is_different <- function(a, b) {
+
+                ## check if one value is missing
+                if (is.na(a) && is.na(b)) return(FALSE)
+                if (is.na(a) && !is.na(b)) return(TRUE)
+                if (!is.na(a) && is.na(b)) return(TRUE)
+
+                # Otherwise, se if values are the same
+                return(a != b)
+              }
+
+              if (is_different(input[[paste0("spec_code_", row_id)]],  cf$SPECCD_ID[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("common_", row_id)]],        cf$COMMON[row.num]))    unsaved.fish(TRUE)
+              if (is_different(input[[paste0("length_", row_id)]],        cf$FISH_LENGTH[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("sex_", row_id)]],   cf$SEXCD_ID[row.num]))  unsaved.fish(TRUE)
+              if (is_different(input[[paste0("shell_", row_id)]],      cf$SHELL[row.num]))       unsaved.fish(TRUE)
+              if (is_different(input[[paste0("cond_", row_id)]],  cf$CONDITION[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("disease_", row_id)]],  cf$DISEASE[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("egg_", row_id)]],  cf$EGG_STAGE[row.num]))     unsaved.fish(TRUE)
+              if (is_different(input[[paste0("clutch_", row_id)]],  cf$CLUTCH[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("vnotch_", row_id)]],  cf$VNOTCH[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("kept_", row_id)]],  cf$KEPT[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("abund_", row_id)]],  cf$ABUNDANCE[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("cull_", row_id)]],  cf$CULLS[row.num]))   unsaved.fish(TRUE)
+            }
+                dbDisconnect(db)
+              }
+            if(unsaved.fish()){
+              showFeedbackWarning("trap_num", "There are unsaved fish data for this trap! Save before changing.", color = "purple")
+              hideFeedback("set_num")
+              showFeedbackWarning("set_num", "There are unsaved fish data for this set! Save before changing.", color = "purple")
+            }
+            }, ignoreInit = TRUE)
+
+  })
+
+  }) ## delay
+
+
+})
 
 
 ## 24  bait code
