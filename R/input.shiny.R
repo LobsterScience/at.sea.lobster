@@ -3171,7 +3171,7 @@ observe({
           }
           ## 41:2 shouldn't be kept if vnotched in prohibited LFAs
           if(!input[[paste0("spec_code_", row_id)]] %in% c(NULL,NA) && input[[paste0("spec_code_", row_id)]] %in% c(2550,2552) &&
-             !input[[paste0("vnotch_", row_id)]] %in% c(NULL,NA) && !input$lfa %in% c(NULL,NA,"") &&
+             !input[[paste0("vnotch_", row_id)]] %in% c(NULL,NA,0) && !input$lfa %in% c(NULL,NA,"") &&
              input$lfa %in% lfa.data$LFA[which(!lfa.data$vnotch.rule %in% "none")]){
             warn.mess <- "Warning!: There are restrictions for retaining V-notched lobster in chosen LFA. Check specific regulations."
             should.be.kept = F
