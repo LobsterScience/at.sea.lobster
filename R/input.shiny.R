@@ -1752,6 +1752,19 @@ suppressWarnings({
               update.fish(db, trap.id = trap.id)
             }
 
+            #######################
+            ## as a last cleanup step, convert any character 'NA' values that got introduced to sql NULL to unify missing values format
+            tables <- c("TRIP_INFO", "SET_INFO", "TRAP_INFO", "FISH_INFO")
+
+            for (table in tables) {
+              col_info <- dbGetQuery(db, paste0("PRAGMA table_info(", table, ");"))
+              for (col in col_info$name) {
+                query <- paste0("UPDATE ", table, " SET ", col, " = NULL WHERE ", col, " = 'NA'")
+                dbExecute(db, query)
+              }
+            }
+            #################################
+
             dbDisconnect(db)
 
             updateNumericInput(session, "trap_num", value = NA)
@@ -1870,6 +1883,25 @@ suppressWarnings({
       }
     }
 
+    ## if set is being saved with no current trap/bait code, check if there are any traps in data for the set being saved
+    if(continue){
+      # Initialize database connection
+      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
+
+      if(is.null(input$trap_num) | is.na(input$trap_num) | is.null(input$bait_code) | is.na(input$bait_code)){
+        check.for.traps <- paste("SELECT * FROM TRAP_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
+        for.traps <- dbGetQuery(db, check.for.traps)
+        dbDisconnect(db)
+
+        if(nrow(for.traps)==0){
+          save.set <- dlgMessage(type = "yesno", message = "No traps found in data or on-screen for this set, do you want to save this empty set? If you don't want to save but just want to check on later sets, just change number in SET/TRAWL/STRING field. ")
+          if(save.set$res %in% "no"){
+            continue = F
+          }
+        }
+      }
+    }
+
     if(continue){
       delay(10, {
         # Initialize database connection
@@ -1885,6 +1917,19 @@ suppressWarnings({
             update.fish(db, trap.id = trap.id)
           }
         }
+
+        #######################
+        ## as a last cleanup step, convert any character 'NA' values that got introduced to sql NULL to unify missing values format
+        tables <- c("TRIP_INFO", "SET_INFO", "TRAP_INFO", "FISH_INFO")
+
+        for (table in tables) {
+          col_info <- dbGetQuery(db, paste0("PRAGMA table_info(", table, ");"))
+          for (col in col_info$name) {
+            query <- paste0("UPDATE ", table, " SET ", col, " = NULL WHERE ", col, " = 'NA'")
+            dbExecute(db, query)
+          }
+        }
+        #################################
 
         dbDisconnect(db)
 
@@ -1926,11 +1971,29 @@ suppressWarnings({
       }
     }
 
+    ## if set is being saved with no current trap/bait code, check if there are any traps in data for the set being saved
+    if(continue){
+      # Initialize database connection
+      db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
+
+      if(is.null(input$trap_num) | is.na(input$trap_num) | is.null(input$bait_code) | is.na(input$bait_code)){
+        check.for.traps <- paste("SELECT * FROM TRAP_INFO WHERE FISHSET_ID = '",set.id, "'", sep = "")
+        for.traps <- dbGetQuery(db, check.for.traps)
+        dbDisconnect(db)
+
+        if(nrow(for.traps)==0){
+          save.set <- dlgMessage(type = "yesno", message = "No traps found in data or on-screen for this set, do you want to save this empty set? If you don't want to save but just want to check on previous sets, just change number in SET/TRAWL/STRING field. ")
+          if(save.set$res %in% "no"){
+            continue = F
+          }
+        }
+      }
+      }
+
     if(continue){
       delay(10, {
         # Initialize database connection
         db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
-
         ## update upstream data
         update.trip(db, trip.id)
         ## Update downstream data
@@ -1941,6 +2004,19 @@ suppressWarnings({
             update.fish(db, trap.id = trap.id)
           }
         }
+
+        #######################
+        ## as a last cleanup step, convert any character 'NA' values that got introduced to sql NULL to unify missing values format
+        tables <- c("TRIP_INFO", "SET_INFO", "TRAP_INFO", "FISH_INFO")
+
+        for (table in tables) {
+          col_info <- dbGetQuery(db, paste0("PRAGMA table_info(", table, ");"))
+          for (col in col_info$name) {
+            query <- paste0("UPDATE ", table, " SET ", col, " = NULL WHERE ", col, " = 'NA'")
+            dbExecute(db, query)
+          }
+        }
+        #################################
 
         dbDisconnect(db)
 
@@ -2675,23 +2751,23 @@ observe({
   if(unsaved.fish){
     hideFeedback("set_num")
     hideFeedback("trap_num")
-    showFeedbackWarning("trap_num", "There are UNSAVED fish data for this trap! Save before changing.", color = "purple")
-    showFeedbackWarning("set_num", "There are UNSAVED fish data for this set! Save before changing.", color = "purple")
+    showFeedbackWarning("trap_num", "There are UNSAVED fish data for this trap! Save before changing trap", color = "purple")
+    showFeedbackWarning("set_num", "There are UNSAVED fish data for this set! Save before changing set", color = "purple")
   }
   if(!unsaved.fish & unsaved.trap){
     hideFeedback("trap_num")
-    showFeedbackWarning("trap_num", "There is UNSAVED trap info for this trap! Save before changing.", color = "purple")
+    showFeedbackWarning("trap_num", "There is UNSAVED trap info for this trap! Save before changing trap", color = "purple")
   }
   if(!unsaved.fish & unsaved.set){
     hideFeedback("set_num")
-    showFeedbackWarning("set_num", "There is UNSAVED set info for this set! Save before changing.", color = "purple")
+    showFeedbackWarning("set_num", "There is UNSAVED set info for this set! Save before changing set", color = "purple")
   }
   if(!unsaved.trap & !unsaved.fish){
     hideFeedback("trap_num")
   }
   if(!unsaved.fish & !unsaved.set & unsaved.trap){
     hideFeedback("set_num")
-    showFeedbackWarning("set_num", "There is UNSAVED trap info for this set! Save before changing.", color = "purple")
+    showFeedbackWarning("set_num", "There is UNSAVED trap info for this set! Save before changing set", color = "purple")
   }
   if(!unsaved.set & !unsaved.trap & !unsaved.fish){
     hideFeedback("set_num")
@@ -3210,10 +3286,12 @@ observe({
     if (any_false) {
       disable("next_trap")
       disable("next_set")
+      disable("prev_set")
       disable("submit_trip")
     } else {
       enable("next_trap")
       enable("next_set")
+      enable("prev_set")
       enable("submit_trip")
     }
   })
