@@ -1065,7 +1065,6 @@ suppressWarnings({
   unsaved.fish <- reactiveVal(F)
   unsaved.trap <- reactiveVal(F)
   unsaved.set <- reactiveVal(F)
-  trap.saved <- reactiveVal(0)
 
 
   ## reactive value for fish table every time new fish data is retrieved from the database (to activate filling in of GUI rows)
@@ -1757,9 +1756,12 @@ suppressWarnings({
 
             updateNumericInput(session, "trap_num", value = NA)
           })
-          ## update save counter to trigger set data check
-          trap.saved(trap.saved()+1)
-          print(trap.saved())
+          ## quickly change set num and change back to make sure it shows save effects
+          delay(500, {
+            set.num <- input$set_num
+            updateNumericInput(session, "set_num", value = NA)
+            updateNumericInput(session, "set_num", value = set.num)
+          })
         }
 
 
@@ -2250,11 +2252,10 @@ suppressWarnings({
   })
 
   ## 13:2 give warning if set data has changed since the last save
-  observeEvent(list(input$set_num, input$num_traps, input$lat,input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents, trap.saved()),{
+  observeEvent(list(input$set_num, input$num_traps, input$lat,input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents),{
     na.set.fields <- c(input$num_traps, input$lat, input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents)
     unsaved.set(F)
     trip.id <- trip.id()
-print("acttivated")
     if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
       set.id <- paste0(trip.id(),"_",input$set_num)
       db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
@@ -2283,14 +2284,13 @@ print("acttivated")
         if (is_different(input$vent_size,  cs$VENT_CD))     unsaved.set(TRUE)
         if (is_different(input$num_vents,  cs$NUM_VENTS))   unsaved.set(TRUE)
 
-        print("ran data")
       }else{
         if(any(!na.set.fields %in% NA)){unsaved.set(TRUE)}
       }
 
       dbDisconnect(db)
     }
-print(unsaved.set)
+
   }, ignoreInit = TRUE)
 
 
@@ -2535,7 +2535,7 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
 
 ## 23: 2 give warning in trap_num if user has made unsaved changes to fish or trap data
 
-## function for checking differences between fields and database variables
+## function for checking differences between fields and database variables (used for fields 13 and 23)
 is_different <- function(a, b) {
   #print(c(a,b))
   ## check if one value is missing
