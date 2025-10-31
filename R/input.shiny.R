@@ -1063,9 +1063,8 @@ suppressWarnings({
 
   ## reactive vals for if any fish, trap or set data has changed and not been saved
   unsaved.fish <- reactiveVal(F)
+  unsaved.trap <- reactiveVal(F)
   unsaved.set <- reactiveVal(F)
-  check.set.save <- reactiveVal(F)
-  check.fish.save <- reactiveVal(F)
 
 
   ## reactive value for fish table every time new fish data is retrieved from the database (to activate filling in of GUI rows)
@@ -2247,13 +2246,11 @@ suppressWarnings({
   })
 
   ## 13:2 give warning if set data has changed since the last save
-  observeEvent(list(input$num_traps, input$lat,input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents, unsaved.fish()),{
-    #check.set.save(F)
+  observeEvent(list(input$set_num, input$num_traps, input$lat,input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents),{
+    na.set.fields <- c(input$num_traps, input$lat, input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents)
     unsaved.set(F)
-    if(!unsaved.fish()){
-      hideFeedback("set_num")
-
     trip.id <- trip.id()
+
     if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
       set.id <- paste0(trip.id(),"_",input$set_num)
       db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
@@ -2272,18 +2269,6 @@ suppressWarnings({
           return(x)
         })
 
-        is_different <- function(a, b) {
-
-          ## check if one value is missing
-          if (is.na(a) && is.na(b)) return(FALSE)
-          if (is.na(a) && !is.na(b)) return(TRUE)
-          if (!is.na(a) && is.na(b)) return(TRUE)
-
-          # Otherwise, se if values are the same
-          return(a != b)
-        }
-
-        # Now use it cleanly:
         if (is_different(input$num_traps,  cs$NUM_TRAPS))   unsaved.set(TRUE)
         if (is_different(input$lat,        cs$LATDDMM))    unsaved.set(TRUE)
         if (is_different(input$lon,        cs$LONGDDMM))   unsaved.set(TRUE)
@@ -2294,15 +2279,11 @@ suppressWarnings({
         if (is_different(input$vent_size,  cs$VENT_CD))     unsaved.set(TRUE)
         if (is_different(input$num_vents,  cs$NUM_VENTS))   unsaved.set(TRUE)
 
+      }else{
+        if(any(!na.set.fields %in% NA)){unsaved.set(TRUE)}
       }
 
       dbDisconnect(db)
-    }
-
-    if(unsaved.set()){
-      showFeedbackWarning("set_num", "There are unsaved data for this set! Save before changing.", color = "purple")
-    }
-
     }
 
   }, ignoreInit = TRUE)
@@ -2547,37 +2528,108 @@ observeEvent(list(input$num_traps,input$trap_num,input$bait_code,input$spec_code
   # }
 }, ignoreInit = T)
 
-## 23: 2 Give warning if there's new unsaved downstream data
+## 23: 2 give warning in trap_num if user has made unsaved changes to fish or trap data
 
-        ## for fish rows
+## function for checking differences between fields and database variables
+is_different <- function(a, b) {
+  #print(c(a,b))
+  ## check if one value is missing
+  if (is.na(a) && is.na(b)) return(FALSE)
+  if (is.na(a) && !is.na(b)) return(TRUE)
+  if (!is.na(a) && is.na(b)) return(TRUE)
+
+  # Otherwise, see if values are the same
+  return(a != b)
+}
+
+## TRAP save check
+observeEvent(list(input$trap_num, input$bait_code,input$bait_code2, input$bait_code3, input$bait_type1, input$bait_type2, input$bait_type3),{
+  na.trap.fields <- c(input$bait_code,input$bait_code2, input$bait_code3, input$bait_type1, input$bait_type2, input$bait_type3)
+  unsaved.trap(F)
+  trip.id <- trip.id()
+
+  if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
+    set.id <- paste0(trip.id(),"_",input$set_num)}
+
+  if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){
+    trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+
+    db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
+    check.this.trap <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
+    ct <- dbGetQuery(db, check.this.trap)
+    dbDisconnect(db)
+
+    if(nrow(ct)>0){
+
+      ## in case any non proper NA values get in through data table, clean these to NA to avoid crashing
+      ct[] <- lapply(ct, function(x) {
+        # Convert factors to character first to avoid level issues
+        if (is.factor(x)) x <- as.character(x)
+
+        # Replace empty strings, "NA", or "NULL" with proper NA
+        x[x %in% c("", "NA", "NULL")] <- NA
+
+        return(x)
+      })
+
+      if (is_different(input$bait_code,  ct$BAIT_CD))   unsaved.trap(TRUE)
+      if (is_different(input$bait_code2,  ct$BAIT_CD2))   unsaved.trap(TRUE)
+      if (is_different(input$bait_code3,  ct$BAIT_CD3))   unsaved.trap(TRUE)
+      if (is_different(input$bait_type1,  ct$BAIT_TYPE1))   unsaved.trap(TRUE)
+      if (is_different(input$bait_type2,  ct$BAIT_TYPE2))   unsaved.trap(TRUE)
+      if (is_different(input$bait_type3,  ct$BAIT_TYPE3))   unsaved.trap(TRUE)
+
+    }else{
+      if(any(!na.trap.fields %in% NA)){unsaved.trap(TRUE)}
+    }
+
+    dbDisconnect(db)
+  }
+
+}, ignoreInit = TRUE)
+
+### FISH save check (harder)
 observe({
-
-  current_rows <- row_ids()
+  current_rows_decoy <- row_ids() ## buy delay
   delay(1000,{
-  lapply(current_rows, function(row_id) {
-            observeEvent(list(input[[paste0("spec_code_", row_id)]], input[[paste0("common_", row_id)]], input[[paste0("length_", row_id)]],
-                              input[[paste0("sex_", row_id)]], input[[paste0("shell_", row_id)]], input[[paste0("cond_", row_id)]],
-                              input[[paste0("disease_", row_id)]], input[[paste0("egg_", row_id)]], input[[paste0("clutch_", row_id)]],
-                              input[[paste0("vnotch_", row_id)]], input[[paste0("kept_", row_id)]], input[[paste0("abund_", row_id)]],
-                              input[[paste0("cull_", row_id)]]), {
-            unsaved.fish(F)
-            hideFeedback("trap_num")
-            hideFeedback("set_num")
+    current_rows <- row_ids()
+    current_rows <- current_rows[-length(current_rows)]
+    lapply(current_rows, function(row_id) {
+      if(!is.na(input[[paste0("spec_code_", row_id)]])){
+        # Wrap the lists of all fields in a reactive so dependencies are tracked
+        fish.fields <- reactive({
+          list(input[[paste0("trap_num_", row_id)]], input[[paste0("spec_code_", row_id)]], input[[paste0("common_", row_id)]], input[[paste0("length_", row_id)]], input[[paste0("sex_", row_id)]],
+               input[[paste0("shell_", row_id)]], input[[paste0("cond_", row_id)]], input[[paste0("disease_", row_id)]], input[[paste0("egg_", row_id)]],
+               input[[paste0("clutch_", row_id)]], input[[paste0("vnotch_", row_id)]], input[[paste0("kept_", row_id)]], input[[paste0("abund_", row_id)]]
+          )})
+        na.fish.fields <- reactive({ ## seprate list of only the fish fields that are supposed to be NA (don't have default starting values)
+          list(input[[paste0("spec_code_", row_id)]], input[[paste0("length_", row_id)]], input[[paste0("sex_", row_id)]],
+               input[[paste0("shell_", row_id)]], input[[paste0("cond_", row_id)]], input[[paste0("disease_", row_id)]], input[[paste0("egg_", row_id)]],
+               input[[paste0("clutch_", row_id)]], input[[paste0("vnotch_", row_id)]], input[[paste0("kept_", row_id)]]
+          )})
 
-            row.num <- as.numeric(gsub("\\D", "", row_id))
-            trip.id <- trip.id()
-            set.id <- NULL
-            if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
-              set.id <- paste0(trip.id(),"_",input$set_num)
-              }
-              if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){
-                trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+        observeEvent(fish.fields(), {
 
-                db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
-                check.fish.table <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
-                check.fish.result <- dbGetQuery(db, check.fish.table)
-                cf <- check.fish.result %>% arrange(as.numeric(FISH_NO)) ## make sure fish data is sorted by fish number (because this is equivalent to row# in the app)
+          unsaved.fish(F)
+          na.fish.fields <- unlist(na.fish.fields())
 
+          row.num <- as.numeric(gsub("\\D", "", row_id))
+          trip.id <- trip.id()
+          set.id <- NULL
+
+          ########## check unsaved trap and fish  data
+          if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
+            set.id <- paste0(trip.id(),"_",input$set_num)
+            }
+
+          if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){
+            trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
+
+            db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
+            check.fish.table <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
+            check.fish.result <- dbGetQuery(db, check.fish.table)
+            dbDisconnect(db)
+            cf <- check.fish.result %>% arrange(as.numeric(FISH_NO)) ## make sure fish data is sorted by fish number (because this is equivalent to row# in the app)
 
             if(nrow(cf)>0){
               ## in case any non proper NA values get in through data table, clean these to NA to avoid crashing
@@ -2587,16 +2639,6 @@ observe({
                 return(x)
               })
 
-              is_different <- function(a, b) {
-
-                ## check if one value is missing
-                if (is.na(a) && is.na(b)) return(FALSE)
-                if (is.na(a) && !is.na(b)) return(TRUE)
-                if (!is.na(a) && is.na(b)) return(TRUE)
-
-                # Otherwise, se if values are the same
-                return(a != b)
-              }
 
               if (is_different(input[[paste0("spec_code_", row_id)]],  cf$SPECCD_ID[row.num]))   unsaved.fish(TRUE)
               if (is_different(input[[paste0("common_", row_id)]],        cf$COMMON[row.num]))    unsaved.fish(TRUE)
@@ -2610,24 +2652,44 @@ observe({
               if (is_different(input[[paste0("vnotch_", row_id)]],  cf$VNOTCH[row.num]))   unsaved.fish(TRUE)
               if (is_different(input[[paste0("kept_", row_id)]],  cf$KEPT[row.num]))   unsaved.fish(TRUE)
               if (is_different(input[[paste0("abund_", row_id)]],  cf$ABUNDANCE[row.num]))   unsaved.fish(TRUE)
-              if (is_different(input[[paste0("cull_", row_id)]],  cf$CULLS[row.num]))   unsaved.fish(TRUE)
-            }
-                dbDisconnect(db)
-              }
-            if(unsaved.fish()){
-              showFeedbackWarning("trap_num", "There are unsaved fish data for this trap! Save before changing.", color = "purple")
-              hideFeedback("set_num")
-              showFeedbackWarning("set_num", "There are unsaved fish data for this set! Save before changing.", color = "purple")
-            }
-            }, ignoreInit = TRUE)
 
-  })
-
+            }else{
+              if(any(!na.fish.fields %in% NA)){unsaved.fish(TRUE)}
+            }
+          }
+        }, ignoreInit = TRUE)
+      }
+    })
   }) ## delay
-
-
 })
 
+## this observer coordinates saving warnings for both fields (23:trap and 13:set num)
+observe({
+  unsaved.fish <- unsaved.fish()
+  unsaved.trap <- unsaved.trap()
+  unsaved.set <- unsaved.set()
+  if(unsaved.fish){
+    hideFeedback("set_num")
+    hideFeedback("trap_num")
+    showFeedbackWarning("trap_num", "There are unsaved fish data for this trap! Save before changing.", color = "purple")
+    showFeedbackWarning("set_num", "There are unsaved fish data for this set! Save before changing.", color = "purple")
+  }
+  if(!unsaved.fish & unsaved.trap){
+    hideFeedback("trap_num")
+    showFeedbackWarning("trap_num", "There is unsaved trap info for this trap! Save before changing.", color = "purple")
+  }
+  if(!unsaved.fish & unsaved.set){
+    hideFeedback("set_num")
+    showFeedbackWarning("set_num", "There is unsaved info for this set! Save before changing.", color = "purple")
+  }
+  if(!unsaved.trap & !unsaved.fish){
+    hideFeedback("trap_num")
+  }
+  if(!unsaved.set & !unsaved.trap & !unsaved.fish){
+    hideFeedback("set_num")
+    hideFeedback("trap_num")
+  }
+})
 
 ## 24  bait code
 ## 24:1 Range and must have a value if there are fish catch data
