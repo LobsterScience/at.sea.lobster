@@ -1065,6 +1065,7 @@ suppressWarnings({
   unsaved.fish <- reactiveVal(F)
   unsaved.trap <- reactiveVal(F)
   unsaved.set <- reactiveVal(F)
+  trap.saved <- reactiveVal(0)
 
 
   ## reactive value for fish table every time new fish data is retrieved from the database (to activate filling in of GUI rows)
@@ -1756,6 +1757,9 @@ suppressWarnings({
 
             updateNumericInput(session, "trap_num", value = NA)
           })
+          ## update save counter to trigger set data check
+          trap.saved(trap.saved()+1)
+          print(trap.saved())
         }
 
 
@@ -2246,11 +2250,11 @@ suppressWarnings({
   })
 
   ## 13:2 give warning if set data has changed since the last save
-  observeEvent(list(input$set_num, input$num_traps, input$lat,input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents),{
+  observeEvent(list(input$set_num, input$num_traps, input$lat,input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents, trap.saved()),{
     na.set.fields <- c(input$num_traps, input$lat, input$lon, input$grid_num, input$depth, input$soak_days, input$trap_type, input$vent_size, input$num_vents)
     unsaved.set(F)
     trip.id <- trip.id()
-
+print("acttivated")
     if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
       set.id <- paste0(trip.id(),"_",input$set_num)
       db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
@@ -2279,13 +2283,14 @@ suppressWarnings({
         if (is_different(input$vent_size,  cs$VENT_CD))     unsaved.set(TRUE)
         if (is_different(input$num_vents,  cs$NUM_VENTS))   unsaved.set(TRUE)
 
+        print("ran data")
       }else{
         if(any(!na.set.fields %in% NA)){unsaved.set(TRUE)}
       }
 
       dbDisconnect(db)
     }
-
+print(unsaved.set)
   }, ignoreInit = TRUE)
 
 
@@ -2555,7 +2560,7 @@ observeEvent(list(input$trap_num, input$bait_code,input$bait_code2, input$bait_c
     trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
 
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
-    check.this.trap <- paste("SELECT * FROM FISH_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
+    check.this.trap <- paste("SELECT * FROM TRAP_INFO WHERE TRAP_ID = '",trap.id, "'", sep = "")
     ct <- dbGetQuery(db, check.this.trap)
     dbDisconnect(db)
 
@@ -2583,7 +2588,6 @@ observeEvent(list(input$trap_num, input$bait_code,input$bait_code2, input$bait_c
       if(any(!na.trap.fields %in% NA)){unsaved.trap(TRUE)}
     }
 
-    dbDisconnect(db)
   }
 
 }, ignoreInit = TRUE)
@@ -2671,19 +2675,23 @@ observe({
   if(unsaved.fish){
     hideFeedback("set_num")
     hideFeedback("trap_num")
-    showFeedbackWarning("trap_num", "There are unsaved fish data for this trap! Save before changing.", color = "purple")
-    showFeedbackWarning("set_num", "There are unsaved fish data for this set! Save before changing.", color = "purple")
+    showFeedbackWarning("trap_num", "There are UNSAVED fish data for this trap! Save before changing.", color = "purple")
+    showFeedbackWarning("set_num", "There are UNSAVED fish data for this set! Save before changing.", color = "purple")
   }
   if(!unsaved.fish & unsaved.trap){
     hideFeedback("trap_num")
-    showFeedbackWarning("trap_num", "There is unsaved trap info for this trap! Save before changing.", color = "purple")
+    showFeedbackWarning("trap_num", "There is UNSAVED trap info for this trap! Save before changing.", color = "purple")
   }
   if(!unsaved.fish & unsaved.set){
     hideFeedback("set_num")
-    showFeedbackWarning("set_num", "There is unsaved info for this set! Save before changing.", color = "purple")
+    showFeedbackWarning("set_num", "There is UNSAVED set info for this set! Save before changing.", color = "purple")
   }
   if(!unsaved.trap & !unsaved.fish){
     hideFeedback("trap_num")
+  }
+  if(!unsaved.fish & !unsaved.set & unsaved.trap){
+    hideFeedback("set_num")
+    showFeedbackWarning("set_num", "There is UNSAVED trap info for this set! Save before changing.", color = "purple")
   }
   if(!unsaved.set & !unsaved.trap & !unsaved.fish){
     hideFeedback("set_num")
