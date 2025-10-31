@@ -548,6 +548,7 @@ suppressWarnings({
   data <- NULL
   for (row_id in row_ids()) {
 
+    ## everything but length should always be whole numbers
     fish_num <- round(as.numeric(gsub("\\D", "", row_id)))
 
     data.row <- data.frame(
@@ -556,7 +557,7 @@ suppressWarnings({
       fish_num = fish_num,
       species_code = input[[paste0("spec_code_", row_id)]],
       common = input[[paste0("common_", row_id)]],
-      length = input[[paste0("length_", row_id)]],
+      length = round(as.numeric(input[[paste0("length_", row_id)]]),2),
       sex = input[[paste0("sex_", row_id)]],
       shell = input[[paste0("shell_", row_id)]],
       condition = input[[paste0("cond_", row_id)]],
@@ -698,9 +699,9 @@ suppressWarnings({
         input$grid_num,
         est.catch = NA,
         input$num_traps,
-        input$lat,
-        input$lon,
-        input$depth,
+        round(as.numeric(input$lat),3),
+        round(as.numeric(input$lon),3),
+        round(as.numeric(input$depth),3),
         input$soak_days,
         source = NA,
         num.hooks = NA,
@@ -719,9 +720,9 @@ suppressWarnings({
     UPDATE SET_INFO
     SET STRATUM_ID = '", input$grid_num, "',
         NUM_TRAPS = '", input$num_traps, "',
-        LATDDMM = '", input$lat, "',
-        LONGDDMM = '", input$lon, "',
-        DEPTH = '", input$depth, "',
+        LATDDMM = '", round(as.numeric(input$lat),3), "',
+        LONGDDMM = '", round(as.numeric(input$lon),3), "',
+        DEPTH = '", round(as.numeric(input$depth),3), "',
         SOAK_DAYS = '", input$soak_days, "',
         TRAP_TYPE = '", input$trap_type, "',
         VENT_CD = '", input$vent_size, "',
@@ -1508,47 +1509,47 @@ suppressWarnings({
 
   # ## Autofill species names for bait codes (subscript)
   observeEvent(input$bait_code, {
-      if(!input$bait_code %in% c(NA,NULL,"")){
+      if(!input$bait_code %in% c(NA,NULL,"") && input$bait_code %in% spec.tab$SPECIES_CODE){
         hideFeedback("bait_code")
         new.bait <- input$bait_code
         b.spec <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait)]
         showFeedback("bait_code",b.spec)
-      }else{hideFeedback("bait_code")}
+      }
       }, ignoreInit = T)
 
   observeEvent(input$bait_code2, {
-      if(!input$bait_code2 %in% c(NA,NULL,"")){
+      if(!input$bait_code2 %in% c(NA,NULL,"") && input$bait_code2 %in% spec.tab$SPECIES_CODE){
         hideFeedback("bait_code2")
         new.bait2 <- input$bait_code2
         b.spec2 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait2)]
         showFeedback("bait_code2",b.spec2)
-      }else{hideFeedback("bait_code2")}
+      }
   }, ignoreInit = T)
 
   observeEvent(input$bait_code3, {
-      if(!input$bait_code3 %in% c(NA,NULL,"")){
+      if(!input$bait_code3 %in% c(NA,NULL,"") && input$bait_code3 %in% spec.tab$SPECIES_CODE){
         hideFeedback("bait_code3")
         new.bait3 <- input$bait_code3
         b.spec3 <- spec.tab$COMMON[which(spec.tab$SPECIES_CODE %in% new.bait3)]
         showFeedback("bait_code3",b.spec3)
-      }else{hideFeedback("bait_code3")}
+      }
   }, ignoreInit = T)
 
   ## Also autofill code descriptions for Trap Type, Vent size, and Bait Types
   observeEvent(input$trap_type, {
-    if(!input$trap_type %in% c(NA,NULL,"")){
+    if(!input$trap_type %in% c(NA,NULL,"") && input$vent_size %in% code.tab$Code[which(code.tab$Field %in% "Trap type")]){
       hideFeedback("trap_type")
       t.type <- code.tab$Name[which(code.tab$Field %in% "Trap Type" & code.tab$Code %in% input$trap_type)]
       showFeedback("trap_type",t.type)
-    }else{hideFeedback("trap_type")}
+    }
   }, ignoreInit = T)
 
   observeEvent(input$vent_size, {
-    if(!input$vent_size %in% c(NA,NULL,"")){
+    if(!input$vent_size %in% c(NA,NULL,"") && input$vent_size %in% code.tab$Code[which(code.tab$Field %in% "Vent Size")]){
       hideFeedback("vent_size")
       v.size <- code.tab$Name[which(code.tab$Field %in% "Vent Size" & code.tab$Code %in% input$vent_size)]
       showFeedback("vent_size",v.size)
-    }else{hideFeedback("vent_size")}
+    }
   }, ignoreInit = T)
 
   # observeEvent(input$bait_type1, {
@@ -2480,6 +2481,17 @@ suppressWarnings({
 
 
 ## 17 Grid No
+  ## whole numbers only
+  observe({
+    runjs('
+    $("#grid_num").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
 ## 17:1 range (Grid number should fall within selected LFA)
   observeEvent(list(input$grid_num,input$lfa),{
     hideFeedback("grid_num")
@@ -2511,6 +2523,17 @@ observeEvent(input$depth,{
 }, ignoreInit = T)
 
 ## 19 Soak Days
+# Whole numbers only
+observe({
+  runjs('
+    $("#soak_days").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+})
 ## 19:1 range and warning if > 15 days
 observeEvent(input$soak_days,{
   if(!input$soak_days %in% c(NA,NULL,"") & (input$soak_days < 0 | input$soak_days > 30)){
@@ -2530,6 +2553,17 @@ observeEvent(input$soak_days,{
 }, ignoreInit = T)
 
 ## 20 Trap Type
+## whole numbers only
+observe({
+  runjs('
+    $("#trap_type").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+})
 ## 20: 1 range 1-4
 observeEvent(input$trap_type,{
   if(!input$trap_type %in% c(NA,NULL,"") & (input$trap_type < 0 | input$trap_type > 4)){
@@ -2547,6 +2581,17 @@ observeEvent(input$trap_type,{
   })
 
 ## 21 Vent Code
+## whole numbers only
+observe({
+  runjs('
+    $("#vent_size").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+})
 ## 21: 1 range 1-5
 observeEvent(input$vent_size,{
   if(!input$vent_size %in% c(NA,NULL,"") & (input$vent_size < 0 | input$vent_size > 5)){
@@ -2675,7 +2720,7 @@ observe({
     current_rows <- row_ids()
     current_rows <- current_rows[-length(current_rows)]
     lapply(current_rows, function(row_id) {
-      if(!is.na(input[[paste0("spec_code_", row_id)]])){
+      if(!is.null(input[[paste0("spec_code_", row_id)]]) && !is.na(input[[paste0("spec_code_", row_id)]])){
         # Wrap the lists of all fields in a reactive so dependencies are tracked
         fish.fields <- reactive({
           list(input[[paste0("trap_num_", row_id)]], input[[paste0("spec_code_", row_id)]], input[[paste0("common_", row_id)]], input[[paste0("length_", row_id)]], input[[paste0("sex_", row_id)]],
@@ -2721,8 +2766,8 @@ observe({
 
 
               if (is_different(input[[paste0("spec_code_", row_id)]],  cf$SPECCD_ID[row.num]))   unsaved.fish(TRUE)
-              if (is_different(input[[paste0("common_", row_id)]],        cf$COMMON[row.num]))    unsaved.fish(TRUE)
-              if (is_different(input[[paste0("length_", row_id)]],        cf$FISH_LENGTH[row.num]))   unsaved.fish(TRUE)
+              if (is_different(input[[paste0("common_", row_id)]],    cf$COMMON[row.num]))    unsaved.fish(TRUE)
+              if (is_different(as.numeric(input[[paste0("length_", row_id)]]),  as.numeric(cf$FISH_LENGTH[row.num])))  unsaved.fish(TRUE)
               if (is_different(input[[paste0("sex_", row_id)]],   cf$SEXCD_ID[row.num]))  unsaved.fish(TRUE)
               if (is_different(input[[paste0("shell_", row_id)]],      cf$SHELL[row.num]))       unsaved.fish(TRUE)
               if (is_different(input[[paste0("cond_", row_id)]],  cf$CONDITION[row.num]))   unsaved.fish(TRUE)
@@ -2776,6 +2821,17 @@ observe({
 })
 
 ## 24  bait code
+## whole numbers only
+observe({
+  runjs('
+    $("#bait_code").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+})
 ## 24:1 Range and must have a value if there are fish catch data
   observeEvent(list(input$bait_code,input$spec_code_row_1),{
       if (input$bait_code %in% c("",NA,NULL) & !input$spec_code_row_1 %in% c(NULL,NA,"")) {
@@ -2795,6 +2851,17 @@ observe({
       }, ignoreInit = T)
 
 ## 25 bait code 2
+  ## whole numbers only
+  observe({
+    runjs('
+    $("#bait_code2").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
 ## 25:1 should only be values in bait code 2 if bait code has values
   observe({
     if (input$bait_code %in% c("",NA,NULL) & !input$bait_code2 %in% c("",NA,NULL)) {
@@ -2814,6 +2881,17 @@ observe({
   })
 
 ## 26 bait code 3
+  ## whole numbers only
+  observe({
+    runjs('
+    $("#bait_code3").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
 ## 26:1 should only be values in bait code 3 if bait code2 has values
   observe({
     if (input$bait_code2 %in% c("",NA,NULL) & !input$bait_code3 %in% c("",NA,NULL)) {
@@ -2833,6 +2911,17 @@ observe({
   })
 
 ## 27 bait type 1
+  ## whole numbers only
+  observe({
+    runjs('
+    $("#bait_type1").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
 ## 27:1 range 1-4
   observeEvent(input$bait_type1,{
     if(!input$bait_type1 %in% c(NA,NULL,"") & (input$bait_type1 < 0 | input$bait_type1 > 4)){
@@ -2850,6 +2939,17 @@ observe({
   })
 
 ## 28 bait type 2
+  ## whole numbers only
+  observe({
+    runjs('
+    $("#bait_type2").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
 ## 28:1 range 1-4 and can only have value if BAIT CD2 has value
   observe({
     if(!input$bait_type2 %in% c(NA,NULL,"") & (input$bait_type2 < 0 | input$bait_type2 > 4)){
@@ -2872,6 +2972,16 @@ observe({
   })
 
 ## 29 bait type 3
+  observe({
+    runjs('
+    $("#bait_type3").on("input", function() {
+      var value = $(this).val();
+      // Remove non-numeric characters (including negative sign)
+      value = value.replace(/[^0-9]/g, "");
+      $(this).val(value);
+    });
+  ')
+  })
 ## 29:1 range 1-4
   observe({
     if(!input$bait_type3 %in% c(NA,NULL,"") & (input$bait_type3 < 0 | input$bait_type3 > 4)){
@@ -2914,6 +3024,21 @@ observe({
 
 
       ## 31 Species Code
+        ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("spec_code_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
+
       ## 31:1 range (lookup table) and rows must be filled sequentially
       ## 31:2 First row Cannot be blank if trap is baited
       observe({
@@ -2986,6 +3111,20 @@ observe({
       ## 33:2
 
       ## 34 Sex
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("sex_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 34:1 Range 1-3 and should only be for crustaceans (includes autofilling descriptions)
       observeEvent(list(input[[paste0("sex_", row_id)]], input[[paste0("spec_code_", row_id)]]),{
         if(!input[[paste0("sex_", row_id)]] %in% c(NULL,NA,1:3)){
@@ -3012,6 +3151,20 @@ observe({
       ## 34:3 If lobster sex = 1 then can't use egg or vnotch fields (Violation impossible - see Autofills)
 
       ## 35 Shell hard
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("shell_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 35:1  Range + can only contain values if species code is lobster (2550) (Violation impossible, see autofills - below is redundant:)
       ## Also contains autofills of descriptions
       # Create an observer for each spec_code and shell_hard field
@@ -3050,6 +3203,20 @@ observe({
       }, ignoreInit = TRUE)  # Avoid triggering on initialization
 
       ## 36  Condition
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("cond_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 36 : 1 range 0:7 and warning if using fish codes for crustacean or vice versa (includes description autofilling)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("cond_", row_id)]]),{
         hideFeedback(paste0("cond_", row_id))
@@ -3080,6 +3247,20 @@ observe({
       }, ignoreInit = T)
 
       ## 37 Shell Disease
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("disease_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 37:1 Can only have values if species is lobster (violation impossible - see autofills)
       ## 37:2 Range + should have a value if species is lobster (includes autofilling of descritptions)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("disease_", row_id)]]),{
@@ -3099,6 +3280,20 @@ observe({
       }, ignoreInit = T)
 
       ## 38 Egg stage
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("egg_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 38:1 range + Can only have value if species is berried lobster (violation impossible - see autofills)
       ## (below includes autofills of descriptions)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("egg_", row_id)]]),{
@@ -3115,6 +3310,20 @@ observe({
       }, ignoreInit = T)
 
       ## 39 Clutch
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("clutch_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 39:1 range + Can only have values for berried lobster (violation impossible - see autofills)
       ## (also includes autofills of descriptions below)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("clutch_", row_id)]]),{
@@ -3131,6 +3340,20 @@ observe({
       }, ignoreInit = T)
 
       ## 40 Vnotch
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("vnotch_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 40:1 range + can only have values for female lobster (violation impossible - see autofills)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("vnotch_", row_id)]]),{
         hideFeedback(paste0("vnotch_", row_id))
@@ -3146,6 +3369,20 @@ observe({
       }, ignoreInit = T)
 
       ## 41 Kept
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("kept_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## Range + shouldn't be kept if other conditions are met
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("sex_", row_id)]], input[[paste0("kept_", row_id)]], input[[paste0("length_", row_id)]], input$lfa,
                         input[[paste0("vnotch_", row_id)]]),{
@@ -3231,6 +3468,20 @@ observe({
       }, ignoreInit = T)
 
       ## 42 Abundance
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("abund_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 42:1 Range + Shouldn't be > 1 for anything except whelks, starfish, urchins, shrimp, etc. (non-measureable species)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("abund_", row_id)]]),{
         hideFeedback(paste0("abund_", row_id))
@@ -3257,6 +3508,20 @@ observe({
       }, ignoreInit = T)
 
       ## 43 Cull
+      ## whole numbers only (for dynamic rows)
+      observe({
+        # Build the dynamic input ID
+        input_id <- paste0("cull_", row_id)
+        # Build the JS string
+        js_code <- sprintf('
+        $("#%s").on("input", function() {
+        var value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/[^0-9]/g, "");
+        $(this).val(value);});', input_id)
+        # Run it
+        runjs(js_code)
+      })
       ## 43:1 Range + Can only have values if species is lobster (Violation impossible, see autofills)
       observeEvent(list(input[[paste0("spec_code_", row_id)]],input[[paste0("cull_", row_id)]]),{
         hideFeedback(paste0("cull_", row_id))
