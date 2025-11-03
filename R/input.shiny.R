@@ -826,6 +826,7 @@ suppressWarnings({
 
     if(enable.main){
     ##reset all fields
+      if(!is.null(input$set_num) && !is.na(input$set_num)){
     shinyjs::enable("trap_num")
     shinyjs::enable("bait_code")
     shinyjs::enable("bait_code2")
@@ -833,6 +834,14 @@ suppressWarnings({
     shinyjs::enable("bait_type1")
     shinyjs::enable("bait_type2")
     shinyjs::enable("bait_type3")
+  }else{shinyjs::disable("trap_num")
+        shinyjs::disable("bait_code")
+        shinyjs::disable("bait_code2")
+        shinyjs::disable("bait_code3")
+        shinyjs::disable("bait_type1")
+        shinyjs::disable("bait_type2")
+        shinyjs::disable("bait_type3")
+        }
 
     shinyjs::enable("land_date")
     shinyjs::enable("vessel_name")
@@ -2673,11 +2682,12 @@ observeEvent(list(input$trap_num, input$bait_code,input$bait_code2, input$bait_c
   na.trap.fields <- c(input$bait_code,input$bait_code2, input$bait_code3, input$bait_type1, input$bait_type2, input$bait_type3)
   unsaved.trap(F)
   trip.id <- trip.id()
+  set.id <- NULL
 
-  if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
+  if(!is.null(trip.id) && !is.na(input$set_num) && !is.null(input$set_num)){
     set.id <- paste0(trip.id(),"_",input$set_num)}
 
-  if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){
+  if(!is.null(set.id) && !is.na(input$trap_num) && !is.null(input$trap_num)){
     trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
 
     db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
@@ -2743,11 +2753,11 @@ observe({
           set.id <- NULL
 
           ########## check unsaved trap and fish  data
-          if(!is.null(trip.id) & !is.na(input$set_num) & !is.null(input$set_num)){
+          if(!is.null(trip.id) && !is.na(input$set_num) && !is.null(input$set_num)){
             set.id <- paste0(trip.id(),"_",input$set_num)
             }
 
-          if(!is.null(set.id) & !is.na(input$trap_num) & !is.null(input$trap_num)){
+          if(!is.null(set.id) && !is.na(input$trap_num) && !is.null(input$trap_num)){
             trap.id <- paste0(trip.id(),"_",input$set_num,"_",input$trap_num)
 
             db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",trip.id,".db"))
@@ -2819,6 +2829,12 @@ observe({
     hideFeedback("trap_num")
   }
 })
+
+##23 : 3 can't enter trap number if there's no set number / set.ID
+observeEvent(input$set_num, {
+  greyouts.main() ## invoke greyouts conditions to control field use
+}, ignoreInit = T)
+
 
 ## 24  bait code
 ## whole numbers only
