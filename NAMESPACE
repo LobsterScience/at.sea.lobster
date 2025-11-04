@@ -3,6 +3,8 @@
 export(check.table)
 export(export.tables)
 export(input.trip)
+export(oracle.upload)
+import(DBI)
 import(RSQLite)
 import(dplyr)
 import(sf)
