@@ -5,7 +5,7 @@
 #' @export
 export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FALSE,
                            trip.dir = if(exists("dat.dir.global")) dat.dir.global else NULL,
-                        trip = if(exists("last.trip")) last.trip else NULL){
+                        trip.file = if(exists("last.trip.file")) last.trip.file else NULL){
 
   if(merge.tables){tables = "all"}
 
@@ -19,15 +19,16 @@ export.tables <- function(tables = NULL, choose.trip = FALSE, merge.tables = FAL
     return(NULL)
   }
 
-  if(!is.null(trip)){
-    trip.file <- paste0(trip.dir,"/",trip,".db")
-    trip.name <- trip
-  }
+  if(is.null(trip.file) && !choose.trip){return(print("No Trip File Chosen!"))}
 
   if(choose.trip){
     dlg_message(paste0("In the following window, select the .db trip file you want to generate ",paste(tables, collapse = ", ")," tables from."))
     trip.file <- dlg_open()$res
-    trip.name <- gsub(".db","",basename(trip.file))
+    last.trip.file <<- trip.file
+  }
+
+  if(!is.null(trip.file)){
+    trip.name <- tools::file_path_sans_ext(basename(trip.file))
   }
 
   dlg_message("In the following window, choose the directory where you want to store you csv table(s)")

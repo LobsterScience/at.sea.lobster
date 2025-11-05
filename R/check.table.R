@@ -5,21 +5,22 @@
 #' @export
 check.table <- function(table = "default", choose.trip = FALSE,
                         dat.dir = if(exists("dat.dir.global")) dat.dir.global else NULL,
-                        trip = if(exists("last.trip")) last.trip else NULL){
+                        trip.file = if(exists("last.trip.file")) last.trip.file else NULL){
 
   if(!table %in% c("default","trip","set","trap","fish")){
     warning("Error: Invalid table name, options are: 'trip','set','trap','fish'")
     return(NULL)
   }
 
-  if(!is.null(trip)){
-    trip.file = paste0(dat.dir,"/",trip,".db")
-  }
+  if(is.null(trip.file) && !choose.trip){return(print("No Trip File Chosen!"))}
+
 
   if(choose.trip){
     dlg_message(paste0("In the following window, select the .db trip file you want to check."))
     trip.file <- dlg_open()$res
+    last.trip.file <<- trip.file
   }
+
 
   suppressWarnings({
   # Initialize database connection

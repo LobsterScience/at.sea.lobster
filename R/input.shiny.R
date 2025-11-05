@@ -1206,7 +1206,7 @@ suppressWarnings({
           ungrey.fish(TRUE) ## used reactively in species code reaction code later
           greyouts.main(enable.main =T) ## use grey-outs function to enable all downstream fields
         ## set last trip for check.table function
-        last.trip <<- new.trip
+        last.trip.file <<- paste0(dat.dir,"/",new.trip,".db")
         # check database for existing set (create if missing)
         create.trip(dat.dir = dat.dir, trip.id = new.trip)
         db <- dbConnect(RSQLite::SQLite(), paste0(dat.dir,"/",new.trip,".db"))
