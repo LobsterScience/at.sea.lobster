@@ -4,7 +4,7 @@
 #' @export
 #'
 oracle.upload <- function(oracle.user = oracle.personal.user, oracle.pass = oracle.personal.password,
-                          oracle.serv = oracle.personal.server, table.space = "LOBSTER"){
+                          oracle.serv = "ptran", table.space = "LOBSTER"){
 
 
 #library(tidyr)
