@@ -415,7 +415,7 @@ fluidRow(
     column(1, selectInput("lfa", "LFA:",choices = c("","L27", "L28","L29","L30","L31A","L31B","L32","L33","L34","L35","L36","L37","L38","L38B","L41")))
   ),
   fluidRow(
-    column(2, selectInput("entry_group", "DATA ENTRY GROUP", choices= c("","CBFH","CMM","DFO","ESFPA","GCIFA","RCIFA","SWLSS"))),
+    column(2, selectInput("entry_group", "DATA OWNER GROUP", choices= c("","CBFH","CMM","DFO","ESFPA","GCIFA","RCIFA","SWLSS"))),
     column(2, textInput("entry_name", "KEY PUNCHER NAME")),
     column(2, dateInput("entry_date", "DATA ENTRY DATE")),
     column(2, textInput("trip_code", "TRIP"), style = "pointer-events: none; opacity: 0.5;")
@@ -2290,7 +2290,7 @@ suppressWarnings({
     }
   })
 
-## 9 Data Entry Group
+## 9 Data Owner Group
 ## 9:1  range = Dropdown list (violation impossible)
 
 ## 10 Data Entry Name
