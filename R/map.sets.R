@@ -1,5 +1,5 @@
 #' @title map.sets
-#' @import dplyr RSQLite sf maps png
+#' @import dplyr RSQLite sf maps magick
 #' @description Opens SET_INFO from a trip .db file and plots set coordinates as points.
 #' @export
 map.sets <- function(choose.trip = FALSE,
@@ -88,7 +88,7 @@ map.sets <- function(choose.trip = FALSE,
         "?access_token=", mapbox_token
       )
 
-      map_img_file <- tempfile(fileext = ".png")
+      map_img_file <- tempfile(fileext = ".img")
       downloaded <- FALSE
       try(download.file(mapbox_url, map_img_file, mode = "wb", quiet = TRUE), silent = TRUE)
       if(file.exists(map_img_file) && file.info(map_img_file)$size > 0){
@@ -97,16 +97,10 @@ map.sets <- function(choose.trip = FALSE,
 
       map_img <- NULL
       if(downloaded){
-        con <- file(map_img_file, "rb")
-        sig <- readBin(con, what = "raw", n = 8)
-        close(con)
-        png_sig <- as.raw(c(137, 80, 78, 71, 13, 10, 26, 10))
-
-        if(identical(sig, png_sig)){
-          map_img <- tryCatch(png::readPNG(map_img_file), error = function(e) NULL)
-        } else {
-          warning("MapBox response was not a PNG image (likely an API error payload); falling back to maps basemap.")
-        }
+        map_img <- tryCatch({
+          img <- magick::image_read(map_img_file)
+          as.raster(img)
+        }, error = function(e) NULL)
       }
 
       if(!is.null(map_img)){
