@@ -2396,18 +2396,21 @@ suppressWarnings({
 
 ## 15 Latitude
 ## 15:1 Range + Coordinate should fall within selected LFA and Grid Number (with some margin for error)
+## 15:2 Range + Coordinate must be sensible (contain 4 digits)
 ## 16 Longitude
 ## 16:1 Range + Coordinate should fall within selected LFA and Grid Number (with some margin for error)
+## 16:2 Range + Coordinate must be sensible (contain 4 digits)
   observeEvent(list(input$lon, input$lat, input$lfa, input$grid_num),{
     hideFeedback("lon")
     hideFeedback("lat")
     checks$check16 <- T
     if(!input$lon %in% c(NULL,NA) && !input$lat %in% c(NULL,NA) &&
-       (input$lon>17959 | input$lon< -17959 | input$lat > 8959.99| input$lat < -8959.99)){
+       (input$lon>17959 | input$lon< -17959 | input$lat > 8959.99| input$lat < -8959.99 |
+        nchar(as.character(abs(trunc(input$lat)))) < 4 | nchar(as.character(abs(trunc(input$lon)))) < 4 )){
       hideFeedback("lon")
       hideFeedback("lat")
-      showFeedbackDanger("lon","Not a valid coordinate!")
-      showFeedbackDanger("lat","Not a valid coordinate!")
+      showFeedbackDanger("lon","Not a valid coordinate for Maritimes!")
+      showFeedbackDanger("lat","Not a valid coordinate for Maritimes!")
       checks$check16 <- F
     }else{
       if(!input$lon %in% c(NULL,NA) && !input$lat %in% c(NULL,NA)){
