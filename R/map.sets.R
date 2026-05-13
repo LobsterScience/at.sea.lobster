@@ -95,8 +95,21 @@ map.sets <- function(choose.trip = FALSE,
         downloaded <- TRUE
       }
 
+      map_img <- NULL
       if(downloaded){
-        map_img <- png::readPNG(map_img_file)
+        con <- file(map_img_file, "rb")
+        sig <- readBin(con, what = "raw", n = 8)
+        close(con)
+        png_sig <- as.raw(c(137, 80, 78, 71, 13, 10, 26, 10))
+
+        if(identical(sig, png_sig)){
+          map_img <- tryCatch(png::readPNG(map_img_file), error = function(e) NULL)
+        } else {
+          warning("MapBox response was not a PNG image (likely an API error payload); falling back to maps basemap.")
+        }
+      }
+
+      if(!is.null(map_img)){
         plot(NA, xlim = xlim, ylim = ylim, xlab = "Longitude", ylab = "Latitude", axes = TRUE, asp = 1)
         rasterImage(map_img, xlim[1], ylim[1], xlim[2], ylim[2])
       } else {
