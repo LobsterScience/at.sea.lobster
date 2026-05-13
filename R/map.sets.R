@@ -73,10 +73,19 @@ map.sets <- function(choose.trip = FALSE,
 
     lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * lon_mult, lon_min_pad)
     lat_pad <- max((bbox["ymax"] - bbox["ymin"]) * lat_mult, lat_min_pad)
-    xlim <- c(bbox["xmin"] - lon_pad, bbox["xmax"] + lon_pad)
-    ylim <- c(bbox["ymin"] - lat_pad, bbox["ymax"] + lat_pad)
+    xlim <- as.numeric(c(bbox["xmin"] - lon_pad, bbox["xmax"] + lon_pad))
+    ylim <- as.numeric(c(bbox["ymin"] - lat_pad, bbox["ymax"] + lat_pad))
 
-    bbox_poly <- sf::st_as_sfc(sf::st_bbox(c(xmin = xlim[1], xmax = xlim[2], ymin = ylim[1], ymax = ylim[2]), crs = sf::st_crs(4326)))
+    xlim <- c(max(-180, xlim[1]), min(180, xlim[2]))
+    ylim <- c(max(-85, ylim[1]), min(85, ylim[2]))
+
+    if(anyNA(c(xlim, ylim)) || xlim[1] >= xlim[2] || ylim[1] >= ylim[2]){
+      warning("Invalid map extent after coordinate conversion; using maps basemap fallback extent.")
+      xlim <- c(-70, -50)
+      ylim <- c(40, 50)
+    }
+
+    bbox_poly <- sf::st_as_sfc(sf::st_bbox(c(xmin = as.numeric(xlim[1]), xmax = as.numeric(xlim[2]), ymin = as.numeric(ylim[1]), ymax = as.numeric(ylim[2])), crs = sf::st_crs(4326)))
     bbox_3857 <- sf::st_transform(bbox_poly, 3857)
     bbox_3857 <- sf::st_bbox(bbox_3857)
     set_sf_3857 <- sf::st_transform(set_sf, 3857)
