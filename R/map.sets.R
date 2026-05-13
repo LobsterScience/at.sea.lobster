@@ -1,5 +1,5 @@
 #' @title map.sets
-#' @import dplyr RSQLite
+#' @import dplyr RSQLite sf
 #' @description Opens SET_INFO from a trip .db file and plots set coordinates as points.
 #' @export
 map.sets <- function(choose.trip = FALSE,
@@ -51,17 +51,23 @@ map.sets <- function(choose.trip = FALSE,
       return(invisible(NULL))
     }
 
-    plot(
-      set$lon_dd[good],
-      set$lat_dd[good],
-      xlab = "Longitude (decimal degrees)",
-      ylab = "Latitude (decimal degrees)",
-      main = "SET_INFO set locations",
-      pch = 19,
-      col = "blue",
-      asp = 1
+    set_sf <- sf::st_as_sf(
+      set[good, ],
+      coords = c("lon_dd", "lat_dd"),
+      crs = 4326,
+      remove = FALSE
     )
 
-    invisible(set)
+    if(requireNamespace("maps", quietly = TRUE)){
+      world_map <- sf::st_as_sf(maps::map("world", plot = FALSE, fill = TRUE))
+      plot(sf::st_geometry(world_map), col = "grey95", border = "grey70")
+      plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
+      title(main = "SET_INFO set locations")
+    } else {
+      warning("Package 'maps' not installed; plotting points without coastline basemap.")
+      plot(sf::st_geometry(set_sf), pch = 19, col = "blue", main = "SET_INFO set locations")
+    }
+
+    invisible(set_sf)
   })
 }
