@@ -125,6 +125,7 @@ map.sets <- function(choose.trip = FALSE,
           map_rast <- terra::rast(map_img_file)
           terra::ext(map_rast) <- c(bbox_3857["xmin"], bbox_3857["xmax"], bbox_3857["ymin"], bbox_3857["ymax"])
           terra::crs(map_rast) <- "EPSG:3857"
+          map_rast <- terra::flip(map_rast, direction = "vertical")
           map_rast_4326 <- terra::project(map_rast, "EPSG:4326", method = "bilinear")
           terra::plotRGB(map_rast_4326, xlim = xlim, ylim = ylim, axes = TRUE, asp = 1)
           TRUE
