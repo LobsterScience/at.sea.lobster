@@ -1,5 +1,5 @@
 #' @title map.sets
-#' @import dplyr RSQLite sf maps magick
+#' @import dplyr RSQLite sf maps terra
 #' @description Opens SET_INFO from a trip .db file and plots set coordinates as points.
 #' @export
 map.sets <- function(choose.trip = FALSE,
@@ -88,7 +88,6 @@ map.sets <- function(choose.trip = FALSE,
     bbox_poly <- sf::st_as_sfc(sf::st_bbox(c(xmin = as.numeric(xlim[1]), xmax = as.numeric(xlim[2]), ymin = as.numeric(ylim[1]), ymax = as.numeric(ylim[2])), crs = sf::st_crs(4326)))
     bbox_3857 <- sf::st_transform(bbox_poly, 3857)
     bbox_3857 <- sf::st_bbox(bbox_3857)
-    set_sf_3857 <- sf::st_transform(set_sf, 3857)
 
     mapbox_token <- if(exists("mapbox.token", envir = .GlobalEnv)) get("mapbox.token", envir = .GlobalEnv) else NULL
 
@@ -120,23 +119,19 @@ map.sets <- function(choose.trip = FALSE,
         downloaded <- TRUE
       }
 
-      map_img <- NULL
+      mapbox_used <- FALSE
       if(downloaded){
-        map_img <- tryCatch({
-          img <- magick::image_read(map_img_file)
-          as.raster(img)
-        }, error = function(e) NULL)
+        mapbox_used <- tryCatch({
+          map_rast <- terra::rast(map_img_file)
+          terra::ext(map_rast) <- c(bbox_3857["xmin"], bbox_3857["xmax"], bbox_3857["ymin"], bbox_3857["ymax"])
+          terra::crs(map_rast) <- "EPSG:3857"
+          map_rast_4326 <- terra::project(map_rast, "EPSG:4326", method = "bilinear")
+          terra::plotRGB(map_rast_4326, xlim = xlim, ylim = ylim, axes = TRUE, asp = 1)
+          TRUE
+        }, error = function(e) FALSE)
       }
 
-      if(!is.null(map_img)){
-        plot(NA,
-             xlim = c(bbox_3857["xmin"], bbox_3857["xmax"]),
-             ylim = c(bbox_3857["ymin"], bbox_3857["ymax"]),
-             xlab = "Easting (Web Mercator)",
-             ylab = "Northing (Web Mercator)",
-             axes = TRUE, asp = 1)
-        rasterImage(map_img, bbox_3857["xmin"], bbox_3857["ymin"], bbox_3857["xmax"], bbox_3857["ymax"])
-      } else {
+      if(!mapbox_used) {
         warning("MapBox tile download failed; falling back to maps basemap.")
         world_map <- sf::st_as_sf(maps::map("world", plot = FALSE, fill = TRUE))
         plot(sf::st_geometry(world_map), col = "antiquewhite", border = "grey55", xlim = xlim, ylim = ylim, axes = TRUE)
@@ -148,13 +143,8 @@ map.sets <- function(choose.trip = FALSE,
 
     trip_id <- if("TRIP_ID" %in% names(set) && any(!is.na(set$TRIP_ID))) as.character(set$TRIP_ID[which(!is.na(set$TRIP_ID))[1]]) else "Unknown"
 
-    if(!is.null(mapbox_token) && nzchar(mapbox_token) && exists("map_img") && !is.null(map_img)) {
-      plot(sf::st_geometry(set_sf_3857), add = TRUE, pch = 19, col = "blue")
-      title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Easting (Web Mercator)", ylab = "Northing (Web Mercator)")
-    } else {
-      plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
-      title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Longitude", ylab = "Latitude")
-    }
+    plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
+    title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Longitude", ylab = "Latitude")
     box()
 
     invisible(set_sf)
