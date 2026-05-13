@@ -76,6 +76,10 @@ map.sets <- function(choose.trip = FALSE,
     xlim <- c(bbox["xmin"] - lon_pad, bbox["xmax"] + lon_pad)
     ylim <- c(bbox["ymin"] - lat_pad, bbox["ymax"] + lat_pad)
 
+    bbox_poly <- sf::st_as_sfc(sf::st_bbox(c(xmin = xlim[1], xmax = xlim[2], ymin = ylim[1], ymax = ylim[2]), crs = sf::st_crs(4326)))
+    bbox_3857 <- sf::st_transform(bbox_poly, 3857)
+    bbox_3857 <- sf::st_bbox(bbox_3857)
+    set_sf_3857 <- sf::st_transform(set_sf, 3857)
 
     mapbox_token <- if(exists("mapbox.token", envir = .GlobalEnv)) get("mapbox.token", envir = .GlobalEnv) else NULL
 
@@ -116,8 +120,13 @@ map.sets <- function(choose.trip = FALSE,
       }
 
       if(!is.null(map_img)){
-        plot(NA, xlim = xlim, ylim = ylim, xlab = "Longitude", ylab = "Latitude", axes = TRUE, asp = 1)
-        rasterImage(map_img, xlim[1], ylim[1], xlim[2], ylim[2])
+        plot(NA,
+             xlim = c(bbox_3857["xmin"], bbox_3857["xmax"]),
+             ylim = c(bbox_3857["ymin"], bbox_3857["ymax"]),
+             xlab = "Easting (Web Mercator)",
+             ylab = "Northing (Web Mercator)",
+             axes = TRUE, asp = 1)
+        rasterImage(map_img, bbox_3857["xmin"], bbox_3857["ymin"], bbox_3857["xmax"], bbox_3857["ymax"])
       } else {
         warning("MapBox tile download failed; falling back to maps basemap.")
         world_map <- sf::st_as_sf(maps::map("world", plot = FALSE, fill = TRUE))
@@ -130,9 +139,14 @@ map.sets <- function(choose.trip = FALSE,
 
     trip_id <- if("TRIP_ID" %in% names(set) && any(!is.na(set$TRIP_ID))) as.character(set$TRIP_ID[which(!is.na(set$TRIP_ID))[1]]) else "Unknown"
 
-    plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
+    if(!is.null(mapbox_token) && nzchar(mapbox_token) && exists("map_img") && !is.null(map_img)) {
+      plot(sf::st_geometry(set_sf_3857), add = TRUE, pch = 19, col = "blue")
+      title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Easting (Web Mercator)", ylab = "Northing (Web Mercator)")
+    } else {
+      plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
+      title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Longitude", ylab = "Latitude")
+    }
     box()
-    title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Longitude", ylab = "Latitude")
 
     invisible(set_sf)
   })
