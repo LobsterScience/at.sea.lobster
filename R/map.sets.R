@@ -68,10 +68,24 @@ map.sets <- function(choose.trip = FALSE,
     mapbox_token <- if(exists("mapbox.token", envir = .GlobalEnv)) get("mapbox.token", envir = .GlobalEnv) else NULL
 
     if(!is.null(mapbox_token) && nzchar(mapbox_token)) {
+      map_width <- 900
+      map_height <- 700
+
+      center_lon <- mean(xlim)
+      center_lat <- mean(ylim)
+
+      lon_range <- max(diff(xlim), 1e-06)
+      lat_range <- max(diff(ylim), 1e-06)
+
+      zoom_lon <- log2((map_width * 360) / (lon_range * 512))
+      zoom_lat <- log2((map_height * 170) / (lat_range * 512))
+      zoom_level <- max(0, min(22, floor(min(zoom_lon, zoom_lat))))
+
       mapbox_url <- paste0(
         "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/",
-        xlim[1], ",", ylim[1], ",", xlim[2], ",", ylim[2],
-        "/900x700?access_token=", mapbox_token
+        center_lon, ",", center_lat, ",", zoom_level,
+        "/", map_width, "x", map_height,
+        "?access_token=", mapbox_token
       )
 
       map_img_file <- tempfile(fileext = ".png")
