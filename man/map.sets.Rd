@@ -18,5 +18,5 @@ map.sets(
 \item{trip.file}{Trip database file path. Defaults to \code{last.trip.file} if available.}
 }
 \description{
-Opens SET_INFO from a trip .db file and plots set coordinates on a Natural Earth geographic basemap, zoomed to the set extent.
+Opens SET_INFO from a trip .db file and plots set coordinates on a geographic basemap (MapBox satellite when mapbox.token is available, otherwise maps::map world basemap), zoomed to the set extent.
 }
