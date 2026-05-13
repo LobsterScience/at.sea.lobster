@@ -18,4 +18,4 @@ Imports:
     shinyjs,
     shinyFeedback,
     sf,
-    maps
+    rnaturalearth

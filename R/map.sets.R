@@ -1,5 +1,5 @@
 #' @title map.sets
-#' @import dplyr RSQLite sf maps
+#' @import dplyr RSQLite sf rnaturalearth
 #' @description Opens SET_INFO from a trip .db file and plots set coordinates as points.
 #' @export
 map.sets <- function(choose.trip = FALSE,
@@ -58,7 +58,7 @@ map.sets <- function(choose.trip = FALSE,
       remove = FALSE
     )
 
-    world_map <- sf::st_as_sf(maps::map("world", plot = FALSE, fill = TRUE))
+    world_map <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf")
 
     bbox <- sf::st_bbox(set_sf)
     lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * 0.35, 0.3)
