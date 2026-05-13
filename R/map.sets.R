@@ -61,14 +61,18 @@ map.sets <- function(choose.trip = FALSE,
     world_map <- sf::st_as_sf(maps::map("world", plot = FALSE, fill = TRUE))
 
     bbox <- sf::st_bbox(set_sf)
-    lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * 0.15, 0.1)
-    lat_pad <- max((bbox["ymax"] - bbox["ymin"]) * 0.15, 0.1)
+    lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * 0.35, 0.3)
+    lat_pad <- max((bbox["ymax"] - bbox["ymin"]) * 0.35, 0.3)
     xlim <- c(bbox["xmin"] - lon_pad, bbox["xmax"] + lon_pad)
     ylim <- c(bbox["ymin"] - lat_pad, bbox["ymax"] + lat_pad)
 
-    plot(sf::st_geometry(world_map), col = "grey95", border = "grey70", xlim = xlim, ylim = ylim)
+    graticule <- sf::st_graticule(set_sf, lon = pretty(xlim, 6), lat = pretty(ylim, 6))
+
+    plot(sf::st_geometry(world_map), col = "antiquewhite", border = "grey55", xlim = xlim, ylim = ylim, axes = TRUE)
+    plot(sf::st_geometry(graticule), add = TRUE, col = "grey85", lty = 3)
     plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
-    title(main = "SET_INFO set locations")
+    box()
+    title(main = "SET_INFO set locations", xlab = "Longitude", ylab = "Latitude")
 
     invisible(set_sf)
   })
