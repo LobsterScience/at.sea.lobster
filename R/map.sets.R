@@ -1,5 +1,5 @@
 #' @title map.sets
-#' @import dplyr RSQLite sf
+#' @import dplyr RSQLite sf maps
 #' @description Opens SET_INFO from a trip .db file and plots set coordinates as points.
 #' @export
 map.sets <- function(choose.trip = FALSE,
@@ -58,15 +58,17 @@ map.sets <- function(choose.trip = FALSE,
       remove = FALSE
     )
 
-    if(requireNamespace("maps", quietly = TRUE)){
-      world_map <- sf::st_as_sf(maps::map("world", plot = FALSE, fill = TRUE))
-      plot(sf::st_geometry(world_map), col = "grey95", border = "grey70")
-      plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
-      title(main = "SET_INFO set locations")
-    } else {
-      warning("Package 'maps' not installed; plotting points without coastline basemap.")
-      plot(sf::st_geometry(set_sf), pch = 19, col = "blue", main = "SET_INFO set locations")
-    }
+    world_map <- sf::st_as_sf(maps::map("world", plot = FALSE, fill = TRUE))
+
+    bbox <- sf::st_bbox(set_sf)
+    lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * 0.15, 0.1)
+    lat_pad <- max((bbox["ymax"] - bbox["ymin"]) * 0.15, 0.1)
+    xlim <- c(bbox["xmin"] - lon_pad, bbox["xmax"] + lon_pad)
+    ylim <- c(bbox["ymin"] - lat_pad, bbox["ymax"] + lat_pad)
+
+    plot(sf::st_geometry(world_map), col = "grey95", border = "grey70", xlim = xlim, ylim = ylim)
+    plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
+    title(main = "SET_INFO set locations")
 
     invisible(set_sf)
   })
