@@ -6,12 +6,15 @@
 \usage{
 map.sets(
   choose.trip = FALSE,
+  zoom = 50,
   dat.dir = if (exists("dat.dir.global")) dat.dir.global else NULL,
   trip.file = if (exists("last.trip.file")) last.trip.file else NULL
 )
 }
 \arguments{
 \item{choose.trip}{Logical; if TRUE prompts for a trip .db file.}
+
+\item{zoom}{Numeric percentage from 0 to 100 controlling map extent. Higher values zoom in closer to the set points.}
 
 \item{dat.dir}{Directory value inherited from package workflow.}
 

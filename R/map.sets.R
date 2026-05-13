@@ -3,6 +3,7 @@
 #' @description Opens SET_INFO from a trip .db file and plots set coordinates as points.
 #' @export
 map.sets <- function(choose.trip = FALSE,
+                     zoom = 50,
                      dat.dir = if(exists("dat.dir.global")) dat.dir.global else NULL,
                      trip.file = if(exists("last.trip.file")) last.trip.file else NULL){
 
@@ -58,9 +59,20 @@ map.sets <- function(choose.trip = FALSE,
       remove = FALSE
     )
 
+
+    zoom <- suppressWarnings(as.numeric(zoom))
+    if(is.na(zoom)) zoom <- 50
+    zoom <- min(max(zoom, 0), 100)
+
     bbox <- sf::st_bbox(set_sf)
-    lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * 0.35, 0.3)
-    lat_pad <- max((bbox["ymax"] - bbox["ymin"]) * 0.35, 0.3)
+    zoom_scale <- 1 - (zoom / 100)
+    lon_mult <- 0.05 + (0.55 - 0.05) * zoom_scale
+    lat_mult <- 0.05 + (0.55 - 0.05) * zoom_scale
+    lon_min_pad <- 0.05 + (0.50 - 0.05) * zoom_scale
+    lat_min_pad <- 0.05 + (0.50 - 0.05) * zoom_scale
+
+    lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * lon_mult, lon_min_pad)
+    lat_pad <- max((bbox["ymax"] - bbox["ymin"]) * lat_mult, lat_min_pad)
     xlim <- c(bbox["xmin"] - lon_pad, bbox["xmax"] + lon_pad)
     ylim <- c(bbox["ymin"] - lat_pad, bbox["ymax"] + lat_pad)
 
@@ -116,12 +128,11 @@ map.sets <- function(choose.trip = FALSE,
       plot(sf::st_geometry(world_map), col = "antiquewhite", border = "grey55", xlim = xlim, ylim = ylim, axes = TRUE)
     }
 
-    graticule <- sf::st_graticule(set_sf, lon = pretty(xlim, 6), lat = pretty(ylim, 6))
+    trip_id <- if("TRIP_ID" %in% names(set) && any(!is.na(set$TRIP_ID))) as.character(set$TRIP_ID[which(!is.na(set$TRIP_ID))[1]]) else "Unknown"
 
-    plot(sf::st_geometry(graticule), add = TRUE, col = "grey85", lty = 3)
     plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
     box()
-    title(main = "SET_INFO set locations", xlab = "Longitude", ylab = "Latitude")
+    title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Longitude", ylab = "Latitude")
 
     invisible(set_sf)
   })
