@@ -1,6 +1,7 @@
 To install the package:
 
 install.packages("remotes")
+
 remotes::install\_github("LobsterScience/at.sea.lobster")
 
 
