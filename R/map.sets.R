@@ -61,23 +61,28 @@ map.sets <- function(choose.trip = FALSE,
 
 
     zoom <- suppressWarnings(as.numeric(zoom))
-    if(is.na(zoom)) zoom <- 50
     zoom <- min(max(zoom, 0), 100)
 
     bbox <- sf::st_bbox(set_sf)
-    zoom_scale <- 1 - (zoom / 100)
-    lon_mult <- 0.05 + (0.55 - 0.05) * zoom_scale
-    lat_mult <- 0.05 + (0.55 - 0.05) * zoom_scale
-    lon_min_pad <- 0.05 + (0.50 - 0.05) * zoom_scale
-    lat_min_pad <- 0.05 + (0.50 - 0.05) * zoom_scale
-
+    # Convert to 0-1 scale
+    z <- zoom / 100
+    # Nonlinear easing
+    zoom_scale <- (1 - z)^2
+    lon_mult <- 0.01 + 4 * zoom_scale
+    lat_mult <- 0.01 + 4 * zoom_scale
+    lon_min_pad <- 0.001
+    lat_min_pad <- 0.001
     lon_pad <- max((bbox["xmax"] - bbox["xmin"]) * lon_mult, lon_min_pad)
     lat_pad <- max((bbox["ymax"] - bbox["ymin"]) * lat_mult, lat_min_pad)
-    xlim <- as.numeric(c(bbox["xmin"] - lon_pad, bbox["xmax"] + lon_pad))
-    ylim <- as.numeric(c(bbox["ymin"] - lat_pad, bbox["ymax"] + lat_pad))
 
+    xlim <- as.numeric(c(bbox["xmin"] - lon_pad,
+                         bbox["xmax"] + lon_pad))
+    ylim <- as.numeric(c(bbox["ymin"] - lat_pad,
+                         bbox["ymax"] + lat_pad))
     xlim <- c(max(-180, xlim[1]), min(180, xlim[2]))
     ylim <- c(max(-85, ylim[1]), min(85, ylim[2]))
+
+
 
     if(anyNA(c(xlim, ylim)) || xlim[1] >= xlim[2] || ylim[1] >= ylim[2]){
       warning("Invalid map extent after coordinate conversion; using maps basemap fallback extent.")
