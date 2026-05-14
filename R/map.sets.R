@@ -92,10 +92,10 @@ map.sets <- function(choose.trip = FALSE,
       map_height <- 700
 
       mapbox_url <- paste0(
-        "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/",
-        xlim[1], ",", ylim[1], ",", xlim[2], ",", ylim[2],
-        "/", map_width, "x", map_height,
-        "?access_token=", mapbox_token
+        "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/auto/",
+        map_width, "x", map_height,
+        "?bbox=", xlim[1], ",", ylim[1], ",", xlim[2], ",", ylim[2],
+        "&access_token=", mapbox_token
       )
 
       map_img_file <- tempfile(fileext = ".img")
