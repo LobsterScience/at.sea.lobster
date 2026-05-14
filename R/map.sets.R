@@ -1,5 +1,5 @@
 #' @title map.sets
-#' @import dplyr RSQLite sf maps terra
+#' @import dplyr RSQLite sf maps magick
 #' @description Opens SET_INFO from a trip .db file and plots set coordinates as points.
 #' @export
 map.sets <- function(choose.trip = FALSE,
@@ -85,29 +85,15 @@ map.sets <- function(choose.trip = FALSE,
       ylim <- c(40, 50)
     }
 
-    bbox_poly <- sf::st_as_sfc(sf::st_bbox(c(xmin = as.numeric(xlim[1]), xmax = as.numeric(xlim[2]), ymin = as.numeric(ylim[1]), ymax = as.numeric(ylim[2])), crs = sf::st_crs(4326)))
-    bbox_3857 <- sf::st_transform(bbox_poly, 3857)
-    bbox_3857 <- sf::st_bbox(bbox_3857)
-
     mapbox_token <- if(exists("mapbox.token", envir = .GlobalEnv)) get("mapbox.token", envir = .GlobalEnv) else NULL
 
     if(!is.null(mapbox_token) && nzchar(mapbox_token)) {
       map_width <- 900
       map_height <- 700
 
-      center_lon <- mean(xlim)
-      center_lat <- mean(ylim)
-
-      lon_range <- max(diff(xlim), 1e-06)
-      lat_range <- max(diff(ylim), 1e-06)
-
-      zoom_lon <- log2((map_width * 360) / (lon_range * 512))
-      zoom_lat <- log2((map_height * 170) / (lat_range * 512))
-      zoom_level <- max(0, min(22, floor(min(zoom_lon, zoom_lat))))
-
       mapbox_url <- paste0(
         "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/",
-        center_lon, ",", center_lat, ",", zoom_level,
+        xlim[1], ",", ylim[1], ",", xlim[2], ",", ylim[2],
         "/", map_width, "x", map_height,
         "?access_token=", mapbox_token
       )
@@ -122,12 +108,10 @@ map.sets <- function(choose.trip = FALSE,
       mapbox_used <- FALSE
       if(downloaded){
         mapbox_used <- tryCatch({
-          map_rast <- terra::rast(map_img_file)
-          terra::ext(map_rast) <- c(bbox_3857["xmin"], bbox_3857["xmax"], bbox_3857["ymin"], bbox_3857["ymax"])
-          terra::crs(map_rast) <- "EPSG:3857"
-          map_rast <- terra::flip(map_rast, direction = "vertical")
-          map_rast_4326 <- terra::project(map_rast, "EPSG:4326", method = "bilinear")
-          terra::plotRGB(map_rast_4326, xlim = xlim, ylim = ylim, axes = TRUE, asp = 1)
+          map_img <- magick::image_read(map_img_file)
+          map_img <- as.raster(map_img)
+          plot(NA, xlim = xlim, ylim = ylim, xlab = "Longitude", ylab = "Latitude", axes = TRUE, asp = 1)
+          rasterImage(map_img, xlim[1], ylim[1], xlim[2], ylim[2])
           TRUE
         }, error = function(e) FALSE)
       }
