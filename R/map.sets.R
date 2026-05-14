@@ -174,6 +174,9 @@ map.sets <- function(choose.trip = FALSE,
 
     trip_id <- if("TRIP_ID" %in% names(set) && any(!is.na(set$TRIP_ID))) as.character(set$TRIP_ID[which(!is.na(set$TRIP_ID))[1]]) else "Unknown"
 
+    lfapolys <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/LFAPolysSF.rds"))
+    plot(lfapolys, add = TRUE, col = NA, border = "red")
+
     plot(sf::st_geometry(set_sf), add = TRUE, pch = 19, col = "blue")
     title(main = paste0("SET_INFO set locations - TRIP_ID: ", trip_id), xlab = "Longitude", ylab = "Latitude")
     box()

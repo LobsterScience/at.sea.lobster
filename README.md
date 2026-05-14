@@ -1,6 +1,6 @@
 To install the package:
 
-devtools::install\_github("LobsterScience/at.sea.lobster")
+remotes::install\_github("LobsterScience/at.sea.lobster")
 
 
 
