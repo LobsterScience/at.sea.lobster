@@ -91,8 +91,9 @@ map.sets <- function(choose.trip = FALSE,
       map_width <- 900
       map_height <- 700
 
-      center_lon <- mean(xlim)
-      center_lat <- mean(ylim)
+      center_lon <- as.numeric(mean(xlim))
+      center_lat <- as.numeric(mean(ylim))
+      center_lat <- max(min(center_lat, 85), -85)
 
       lon_range <- max(diff(xlim), 1e-06)
       lat_range <- max(diff(ylim), 1e-06)
@@ -127,18 +128,23 @@ map.sets <- function(choose.trip = FALSE,
 
           center_geom <- sf::st_sfc(sf::st_point(c(center_lon, center_lat)), crs = 4326)
           center_3857 <- sf::st_transform(center_geom, 3857)
-          center_xy <- sf::st_coordinates(center_3857)[1, ]
+          center_xy <- as.numeric(sf::st_coordinates(center_3857)[1, ])
 
-          half_w_m <- (map_width / 2) * m_per_px
-          half_h_m <- (map_height / 2) * m_per_px
+          half_w_m <- as.numeric((map_width / 2) * m_per_px)
+          half_h_m <- as.numeric((map_height / 2) * m_per_px)
 
-          img_bbox_3857 <- sf::st_as_sfc(sf::st_bbox(c(
+          bbox_vals <- c(
             xmin = center_xy[1] - half_w_m,
             xmax = center_xy[1] + half_w_m,
             ymin = center_xy[2] - half_h_m,
             ymax = center_xy[2] + half_h_m
-          ), crs = sf::st_crs(3857)))
+          )
 
+          if(anyNA(bbox_vals) || any(!is.finite(bbox_vals)) || bbox_vals["xmin"] >= bbox_vals["xmax"] || bbox_vals["ymin"] >= bbox_vals["ymax"]) {
+            stop("Invalid MapBox image bbox values.")
+          }
+
+          img_bbox_3857 <- sf::st_as_sfc(sf::st_bbox(setNames(as.numeric(bbox_vals), names(bbox_vals)), crs = sf::st_crs(3857)))
           img_bbox_4326 <- sf::st_bbox(sf::st_transform(img_bbox_3857, 4326))
 
           plot(NA, xlim = c(img_bbox_4326["xmin"], img_bbox_4326["xmax"]),
