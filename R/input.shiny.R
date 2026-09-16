@@ -520,9 +520,9 @@ suppressWarnings({
   ## remove code 2553 code for berried lobster (rdundan and potentially confusing)
   spec.tab <- spec.tab %>% filter(!SPECIES_CODE %in% 2553)
   #crustaceans <- spec.tab[grepl("crab|lobster", spec.tab$COMMON, ignore.case = TRUE), ]
-  crust.codes <- c(2550,2552,2511,2513,2520,2523,2526,2531) ## doesn't include lobster larvae (2551)
+  crust.codes <- c(2550,2552,2511,2513,2520,2523,2526,2531,2527,2528) ## doesn't include lobster larvae (2551)
   #wsu <- spec.tab[grepl("whelk|starfish|urchin", spec.tab$COMMON, ignore.case = TRUE), ]
-  abund.species <- c(4210,2559,6400,6100,4330,2100,4321,8520)
+  abund.species <- c(4210,2559,6400,6100,4330,2100,4321,8520,6200)
   code.tab <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/codes.rds"))
   condition <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/condition.rds"))
   lfa.data <- readRDS(paste0(system.file("data", package = "at.sea.lobster"), "/LFAdata.rds"))
@@ -916,7 +916,7 @@ suppressWarnings({
         shinyjs::enable(paste0("vnotch_", row_id) )
         shinyjs::enable(paste0("kept_", row_id) )
         shinyjs::disable(paste0("abund_", row_id) )
-        shinyjs::disable(paste0("cull_", row_id) )  ## fully disabled, only CBFH uses it. Just need to change to enable on this line if you want to renable for lobster
+        shinyjs::enable(paste0("cull_", row_id) )  ## fully disabled, only CBFH uses it. Just need to change to enable on this line if you want to renable for lobster
 
         ### fish type options
         ## 1. Crustacean (not lobster)
